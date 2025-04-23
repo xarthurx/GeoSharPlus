@@ -64,5 +64,5 @@ add_custom_target(GenerateFlatBuffers DEPENDS
 
 
 # Create generated directory before use
-add_subdirectory(gbCPP)
+add_subdirectory(GeoBridgeCPP)
 
