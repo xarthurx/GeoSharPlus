@@ -33,3 +33,5 @@
 
 # vcpkg installed libraries
 vcpkg_installed
+CMakeFiles
+CMakeCache.txt
