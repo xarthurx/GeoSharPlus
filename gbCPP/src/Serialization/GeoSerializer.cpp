@@ -1,6 +1,8 @@
-#include "GeomBridge/Serialization/GeometrySerializer.h"
+#include "GeoBridgeRHGH/Serialization/GeoSerializer.h"
 #include "flatbuffers/flatbuffers.h"
-#include "geometry_generated.h"
+#include "GeoBridgeRHGH/FB/geometry_generated.h"
+
+namespace FB = GeoBridgeRHGH::FB; 
 
 namespace GeomBridgeRHGH::Serialization {
     
