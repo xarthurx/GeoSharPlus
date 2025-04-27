@@ -1,8 +1,9 @@
 #pragma once
-#include "MathTypes.h"
 #include <vector>
 
-namespace GeomBridgeRHGH {
+#include "MathTypes.h"
+
+namespace GeoBridgeCPP {
 struct Polyline {
   MatrixX3d vertices;
   bool isClosed;
@@ -15,11 +16,9 @@ struct Mesh {
   MatrixX3i F;
 
   // Optional per-vertex data
-  Eigen::VectorXd C; 
+  Eigen::VectorXd C;
 
   bool validate() const;
   std::pair<Vector3d, Vector3d> boundingBox() const;
-
 };
-}
-
+}  // namespace GeomBridgeCPP

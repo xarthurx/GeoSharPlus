@@ -1,0 +1,18 @@
+namespace GeoBridgeCPP.FB;
+
+struct Vector3d {
+    x:double;
+    y:double;
+    z:double;
+}
+
+table MeshData {
+    vertices:[Vector3d];
+    faces:[int];  // Flattened face indices
+    face_stride:uint = 3;  // Triangles by default
+}
+
+table PolylineData {
+    vertices:[Vector3d];
+    is_closed:bool = false;
+}

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 
-set(PROJECT_NAME GeomBridgeCPP)
+set(PROJECT_NAME GeoBridgeCPP)
 
 # Check for VCPKG_ROOT environment variable
 if(DEFINED ENV{VCPKG_ROOT})
@@ -46,6 +46,18 @@ message(STATUS "Found libigl: ${libigl_DIR}")
 
 find_package(Flatbuffers CONFIG REQUIRED)
 message(STATUS "Found Flatbuffers: ${Flatbuffers_DIR}")
+if(NOT EXISTS "${FLATBUFFERS_FLATC_EXECUTABLE}")
+	find_program(flatbuffers_FLATC_EXECUTABLE flatc
+		PATHS "${Flatbuffers_DIR}/tools/flatbuffers"
+		PATH_SUFFIXES bin
+	)
+	if(flatbuffers_FLATC_EXECUTABLE)
+		message(STATUS "Found flatc by searching: ${flatbuffers_FLATC_EXECUTABLE}")
+	else()
+		message(FATAL_ERROR "flatc compiler not found. Please ensure Flatbuffers is properly installed.")
+	endif()
+endif()
+message(STATUS "flatc executable path: ${FLATBUFFERS_FLATC_EXECUTABLE}")
 
 # Print all CMake variables for debugging
 message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
@@ -55,30 +67,29 @@ message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 # FLATBUFFER TARGET
 ###########################################
 # FlatBuffers code generation setup
-set(FLATBUFFERS_SCHEMA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gbCPP/schemas")
+set(FLATBUFFERS_SCHEMA "${CMAKE_CURRENT_SOURCE_DIR}/schema/geometry.fbs")
 set(FLATBUFFERS_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
+file(MAKE_DIRECTORY "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB")
 # Create custom command for schema compilation
 add_custom_command(
-    OUTPUT "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB/geometry_generated.h"
-    COMMAND ${Flatbuffers_FLATC_EXECUTABLE}
-        -c
-        --scoped-enums
-        --gen-object-api
-        -o "${FLATBUFFERS_GENERATED_DIR}"
-        "${FLATBUFFERS_SCHEMA_DIR}/geometry.fbs"
-    DEPENDS "${FLATBUFFERS_SCHEMA_DIR}/geometry.fbs"
-    COMMENT "Generating FlatBuffers code from schema"
-    VERBATIM
+	OUTPUT "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB/geometry_generated.h"
+	COMMAND ${flatbuffers_FLATC_EXECUTABLE}
+		--cpp
+		--scoped-enums
+		-o "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB"
+		"${FLATBUFFERS_SCHEMA}"
+	DEPENDS "${FLATBUFFERS_SCHEMA}"
+	COMMENT "Generating FlatBuffers headers"
+	VERBATIM
 )
-
 # Create target to drive code generation
-add_custom_target(GenerateFlatBuffers DEPENDS
+add_custom_target(GeneratedFlatBuffers DEPENDS
     "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB/geometry_generated.h"
 )
 
 # Create generated directory before use
-file(MAKE_DIRECTORY "${FLATBUFFERS_GENERATED_DIR}")
+file(MAKE_DIRECTORY "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB")
 
 
 ###########################################
@@ -116,15 +127,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # Make sure we generate schemas before building
-add_dependencies(${PROJECT_NAME} GenerateFlatBuffers)
+add_dependencies(${PROJECT_NAME} GeneratedFlatBuffers)
 
 # Platform-specific configuration
 if(WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE 
-        GEOBRIDGE_API=__declspec(dllexport))
+    target_compile_definitions(${PROJECT_NAME} PRIVATE GEOBRIDGE_EXPORTS)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /EHsc)
 else()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE 
-        GEOBRIDGE_API=__attribute__((visibility("default"))))
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
 endif()
