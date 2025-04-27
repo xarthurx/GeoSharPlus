@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
-using Rhino.Geometry;
 using FlatBuffers;
 using GeomBridge.FB; // Generated FlatBuffers namespace
+using Rhino.Geometry;
 
 namespace GeoBridge.NET
 {
@@ -15,8 +15,8 @@ namespace GeoBridge.NET
 
             // Serialize vertices
             var verticesOffset = MeshData.CreateVerticesVectorBlock(
-                builder, 
-                mesh.Vertices.ToFloatArray(), 
+                builder,
+                mesh.Vertices.ToFloatArray(),
                 mesh.Vertices.Count);
 
             // Serialize faces (triangles only)
@@ -29,22 +29,22 @@ namespace GeoBridge.NET
                 faces[i * 3 + 2] = face.C;
             }
             var facesOffset = MeshData.CreateFacesVectorBlock(
-                builder, 
+                builder,
                 faces);
 
             // Build final mesh
             var meshOffset = MeshData.CreateMeshData(
-                builder, 
-                verticesOffset, 
+                builder,
+                verticesOffset,
                 facesOffset);
 
             builder.Finish(meshOffset.Value);
-            
+
             // Copy to unmanaged memory
             var byteArray = builder.SizedByteArray();
             IntPtr bufferPtr = Marshal.AllocCoTaskMem(byteArray.Length);
             Marshal.Copy(byteArray, 0, bufferPtr, byteArray.Length);
-            
+
             return bufferPtr;
         }
 
@@ -63,14 +63,14 @@ namespace GeoBridge.NET
 
             // Rebuild Rhino mesh
             var mesh = new Mesh();
-            
+
             // Add vertices
             for (int i = 0; i < meshData.VerticesLength; i++)
             {
                 var vec = meshData.Vertices(i);
                 mesh.Vertices.Add(
-                    (float)vec.Value.X, 
-                    (float)vec.Value.Y, 
+                    (float)vec.Value.X,
+                    (float)vec.Value.Y,
                     (float)vec.Value.Z);
             }
 
@@ -91,9 +91,9 @@ namespace GeoBridge.NET
         {
             var inputBuffer = ToNativeBuffer(input);
             var outputBuffer = NativeBridge.ProcessGeometry(
-                inputBuffer, 
+                inputBuffer,
                 (UIntPtr)Marshal.SizeOf(typeof(byte)) * (UIntPtr)inputBuffer);
-            
+
             return FromNativeBuffer(outputBuffer);
         }
     }

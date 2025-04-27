@@ -1,6 +1,6 @@
-#include "GeomBridge/Core/Geometry.h"
+#include "GeomBridgeCPP/Core/Geometry.h"
 
-namespace GeoBridgeRHGH {
+namespace GeoBridgeCPP {
 
 // Mesh validation implementation
 bool Mesh::validate() const {

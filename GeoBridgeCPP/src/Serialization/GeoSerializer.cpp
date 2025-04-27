@@ -1,10 +1,10 @@
-#include "GeoBridgeRHGH/Serialization/GeoSerializer.h"
 #include "flatbuffers/flatbuffers.h"
-#include "GeoBridgeRHGH/FB/geometry_generated.h"
+#include "GeoBridgeCPP/Serialization/GeoSerializer.h"
+#include "GeoBridgeCPP/FB/geometry_generated.h"
 
-namespace FB = GeoBridgeRHGH::FB; 
+namespace FB = GeoBridgeCPP::FB; 
 
-namespace GeomBridgeRHGH::Serialization {
+namespace GeomBridgeCPP::Serialization {
     
     std::vector<uint8_t> serializeMesh(const Mesh& mesh) {
         flatbuffers::FlatBufferBuilder builder(1024);

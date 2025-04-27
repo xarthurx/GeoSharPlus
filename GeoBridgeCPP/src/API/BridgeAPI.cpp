@@ -1,5 +1,5 @@
-#include "GeomBridge/API/BridgeAPI.h"
-#include "GeomBridge/Serialization/GeometrySerializer.h"
+#include "GeomBridgeCPP/API/BridgeAPI.h"
+#include "GeomBridgeCPP/Serialization/GeometrySerializer.h"
 
 extern "C" {
     

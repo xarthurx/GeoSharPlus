@@ -36,3 +36,6 @@ vcpkg_installed
 CMakeFiles
 CMakeCache.txt
 build
+.vs
+GeoBridgeNET/obj
+GeoBridgeDemoGH/obj
