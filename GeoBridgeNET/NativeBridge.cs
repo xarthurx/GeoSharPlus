@@ -1,36 +1,84 @@
-using System;
+//using System;
 using System.Runtime.InteropServices;
 
-namespace GeomBridge.NET
+namespace GeoBridgeNET
 {
-    public static class NativeBridge
+  public static class NativeBridge
+  {
+    private const string WindowsLibName = "GeoBridgeCPP.dll";
+    private const string MacOSLibName = "libGeoBridgeCPP.dylib";
+
+    // For each function, we create 3 functions: Windows, macOS implementations, and the public API
+
+    // CreateMeshBuffer
+    [DllImport(WindowsLibName, EntryPoint = "create_mesh_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr CreateMeshBufferWindows(
+        [MarshalAs(UnmanagedType.LPArray)] double[] vertices,
+        UIntPtr vertexCount,
+        [MarshalAs(UnmanagedType.LPArray)] int[] faces,
+        UIntPtr faceCount);
+
+    [DllImport(MacOSLibName, EntryPoint = "create_mesh_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr CreateMeshBufferMacOS(
+        [MarshalAs(UnmanagedType.LPArray)] double[] vertices,
+        UIntPtr vertexCount,
+        [MarshalAs(UnmanagedType.LPArray)] int[] faces,
+        UIntPtr faceCount);
+
+    public static IntPtr CreateMeshBuffer(double[] vertices, UIntPtr vertexCount, int[] faces, UIntPtr faceCount)
     {
-        // Windows vs MacOS library name handling
-        const string LibName =
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
-            "GeoBridgeRHGH.dll" : "libGeoBridgeRHGH.dylib";
-
-        [DllImport(LibName, EntryPoint = "create_mesh_buffer",
-            CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr CreateMeshBuffer(
-            [MarshalAs(UnmanagedType.LPArray)] double[] vertices,
-            UIntPtr vertexCount,
-            [MarshalAs(UnmanagedType.LPArray)] int[] faces,
-            UIntPtr faceCount);
-
-        [DllImport(LibName, EntryPoint = "get_buffer_size",
-            CallingConvention = CallingConvention.Cdecl)]
-        public static extern UIntPtr GetBufferSize(IntPtr buffer);
-
-        [DllImport(LibName, EntryPoint = "free_buffer",
-            CallingConvention = CallingConvention.Cdecl)]
-        public static extern void FreeBuffer(IntPtr buffer);
-
-        // Generic geometry processing example
-        [DllImport(LibName, EntryPoint = "process_geometry",
-            CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr ProcessGeometry(
-            IntPtr inputBuffer,
-            UIntPtr bufferSize);
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        return CreateMeshBufferWindows(vertices, vertexCount, faces, faceCount);
+      else
+        return CreateMeshBufferMacOS(vertices, vertexCount, faces, faceCount);
     }
+
+    // GetBufferSize
+    [DllImport(WindowsLibName, EntryPoint = "get_buffer_size", CallingConvention = CallingConvention.Cdecl)]
+    private static extern UIntPtr GetBufferSizeWindows(IntPtr buffer);
+
+    [DllImport(MacOSLibName, EntryPoint = "get_buffer_size", CallingConvention = CallingConvention.Cdecl)]
+    private static extern UIntPtr GetBufferSizeMacOS(IntPtr buffer);
+
+    public static UIntPtr GetBufferSize(IntPtr buffer)
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        return GetBufferSizeWindows(buffer);
+      else
+        return GetBufferSizeMacOS(buffer);
+    }
+
+    // FreeBuffer
+    [DllImport(WindowsLibName, EntryPoint = "free_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void FreeBufferWindows(IntPtr buffer);
+
+    public static void FreeBuffer(IntPtr buffer)
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        FreeBufferWindows(buffer);
+      else
+        FreeBufferMacOS(buffer);
+    }
+
+
+
+    // ProcessGeometry
+    [DllImport(MacOSLibName, EntryPoint = "free_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void FreeBufferMacOS(IntPtr buffer);
+
+
+    [DllImport(WindowsLibName, EntryPoint = "process_geometry", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr ProcessGeometryWindows(IntPtr inputBuffer, UIntPtr bufferSize);
+
+    [DllImport(MacOSLibName, EntryPoint = "process_geometry", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr ProcessGeometryMacOS(IntPtr inputBuffer, UIntPtr bufferSize);
+
+    public static IntPtr ProcessGeometry(IntPtr inputBuffer, UIntPtr bufferSize)
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        return ProcessGeometryWindows(inputBuffer, bufferSize);
+      else
+        return ProcessGeometryMacOS(inputBuffer, bufferSize);
+    }
+  }
 }

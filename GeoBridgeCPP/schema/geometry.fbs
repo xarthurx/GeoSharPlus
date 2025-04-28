@@ -1,4 +1,4 @@
-namespace GeoBridgeCPP.FB;
+namespace GeoBridgeFB;
 
 struct Vector3d {
     x:double;

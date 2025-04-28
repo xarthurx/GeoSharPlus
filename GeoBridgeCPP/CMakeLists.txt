@@ -64,32 +64,57 @@ message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
 ###########################################
-# FLATBUFFER TARGET
+# FLATBUFFER GENERATION
 ###########################################
 # FlatBuffers code generation setup
 set(FLATBUFFERS_SCHEMA "${CMAKE_CURRENT_SOURCE_DIR}/schema/geometry.fbs")
-set(FLATBUFFERS_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(FLATBUFFERS_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../generated/GeoBridgeFB")
 
-file(MAKE_DIRECTORY "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB")
-# Create custom command for schema compilation
-add_custom_command(
-	OUTPUT "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB/geometry_generated.h"
-	COMMAND ${flatbuffers_FLATC_EXECUTABLE}
-		--cpp
-		--scoped-enums
-		-o "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB"
-		"${FLATBUFFERS_SCHEMA}"
-	DEPENDS "${FLATBUFFERS_SCHEMA}"
-	COMMENT "Generating FlatBuffers headers"
-	VERBATIM
-)
-# Create target to drive code generation
-add_custom_target(GeneratedFlatBuffers DEPENDS
-    "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB/geometry_generated.h"
+# Create output directories
+file(MAKE_DIRECTORY "${FLATBUFFERS_OUTPUT_DIR}")
+file(MAKE_DIRECTORY "${FLATBUFFERS_OUTPUT_DIR}/cpp")
+file(MAKE_DIRECTORY "${FLATBUFFERS_OUTPUT_DIR}/csharp")
+
+# Create a temporary schema file with namespace for each language
+file(READ "${FLATBUFFERS_SCHEMA}" SCHEMA_CONTENT)
+
+# Generate C++ and C# code directly during configure time
+message(STATUS "Generating Flatbuffers C++ code...")
+execute_process(
+    COMMAND ${flatbuffers_FLATC_EXECUTABLE}
+    --cpp
+    --scoped-enums
+    -o "${FLATBUFFERS_OUTPUT_DIR}/cpp"
+    "${FLATBUFFERS_SCHEMA}"
+    RESULT_VARIABLE FLATC_CPP_RESULT
 )
 
-# Create generated directory before use
-file(MAKE_DIRECTORY "${FLATBUFFERS_GENERATED_DIR}/GeoBridgeCPP/FB")
+if(NOT FLATC_CPP_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to generate C++ Flatbuffers code")
+endif()
+
+# C# version with proper namespace
+message(STATUS "Creating temporary schema with C# namespace...")
+string(REPLACE "namespace GeoBridgeCPP.FB;" "namespace GeoBridgeNET.FB;" SCHEMA_CONTENT_CSHARP "${SCHEMA_CONTENT}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/temp_geometry_csharp.fbs" "${SCHEMA_CONTENT_CSHARP}")
+
+message(STATUS "Generating Flatbuffers C# code...")
+execute_process(
+    COMMAND ${flatbuffers_FLATC_EXECUTABLE}
+    --csharp
+    --scoped-enums
+    --cs-gen-json-serializer
+    --gen-object-api
+    -o "${FLATBUFFERS_OUTPUT_DIR}/csharp"
+    "${FLATBUFFERS_SCHEMA}"
+    RESULT_VARIABLE FLATC_CSHARP_RESULT
+)
+
+if(NOT FLATC_CSHARP_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to generate C# Flatbuffers code")
+endif()
+
+message(STATUS "Flatbuffers generation complete")
 
 
 ###########################################
@@ -113,7 +138,7 @@ source_group("Source Files" FILES ${SOURCES})
 # Critical include path
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${FLATBUFFERS_GENERATED_DIR}  # For generated FlatBuffers code
+    ${CMAKE_CURRENT_SOURCE_DIR}/../generated  # For generated FlatBuffers code
     ${libigl_INCLUDE_DIRS}
 )
 
@@ -126,8 +151,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     # Threads::Threads
 )
 
-# Make sure we generate schemas before building
-add_dependencies(${PROJECT_NAME} GeneratedFlatBuffers)
+# No need to add dependency since we generate at configure time
 
 # Platform-specific configuration
 if(WIN32)
