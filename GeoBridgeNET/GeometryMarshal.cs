@@ -8,57 +8,95 @@ namespace GeoBridgeNET
 {
   public static class GeometryMarshal
   {
-    // Convert Rhino mesh to native buffer
-    public static IntPtr ToNativeBuffer(Mesh mesh)
+    // Rhino Polyline IO
+    public static IntPtr ToNativePolyline(Polyline polyline)
     {
       var builder = new FlatBufferBuilder(1024);
-
       // Serialize vertices
       var verticesOffset = default(VectorOffset);
-      if (mesh.Vertices.Count > 0)
+      if (polyline.Count > 0)
       {
-        FB.MeshData.StartVerticesVector(builder, mesh.Vertices.Count);
+        FB.MeshData.StartVerticesVector(builder, polyline.Count);
         // Add vertices in reverse order (important!)
-        for (int i = mesh.Vertices.Count - 1; i >= 0; i--)
+        for (int i = polyline.Count - 1; i >= 0; i--)
         {
-          var v = mesh.Vertices[i];
+          var v = polyline[i];
           FB.Vector3d.CreateVector3d(builder, v.X, v.Y, v.Z);
         }
         verticesOffset = builder.EndVector();
       }
-
-      // Serialize faces (triangles only)
-      var faces = new int[mesh.Faces.Count * 3];
-      for (int i = 0; i < mesh.Faces.Count; i++)
-      {
-        var face = mesh.Faces[i];
-        faces[i * 3] = face.A;
-        faces[i * 3 + 1] = face.B;
-        faces[i * 3 + 2] = face.C;
-      }
-
-      var facesOffset = FB.MeshData.CreateFacesVectorBlock(
+      // Build final polyline
+      var polylineOffset = FB.PolylineData.CreatePolylineData(
           builder,
-          faces);
-
-      // Build final mesh
-      var meshOffset = FB.MeshData.CreateMeshData(
-          builder,
-          verticesOffset,
-          facesOffset);
-
-      builder.Finish(meshOffset.Value);
-
+          verticesOffset);
+      builder.Finish(polylineOffset.Value);
       // Copy to unmanaged memory
       var byteArray = builder.SizedByteArray();
       IntPtr bufferPtr = Marshal.AllocCoTaskMem(byteArray.Length);
       Marshal.Copy(byteArray, 0, bufferPtr, byteArray.Length);
-
       return bufferPtr;
     }
 
-    // Convert native buffer to Rhino mesh
-    public static Mesh FromNativeBuffer(IntPtr bufferPtr)
+    public static Polyline FromNativePolyline(IntPtr bufferPtr)
+    {
+      // Get buffer size and copy
+      var bufferSize = (int)NativeBridge.GetBufferSize(bufferPtr);
+      var byteArray = new byte[bufferSize];
+      Marshal.Copy(bufferPtr, byteArray, 0, bufferSize);
+      NativeBridge.FreeBuffer(bufferPtr);
+
+      // Parse FlatBuffers data
+      var byteBuffer = new ByteBuffer(byteArray);
+      var polylineData = FB.PolylineData.GetRootAsPolylineData(byteBuffer);
+
+      // Create new Rhino polyline
+      var polyline = new Polyline();
+
+      // Add vertices
+      for (int i = 0; i < polylineData.PointsLength; i++)
+      {
+        var vec = polylineData.Points(i);
+        // Handle potential null value
+        polyline.Add(
+            x: vec?.X ?? 0,
+            y: vec?.Y ?? 0,
+            z: vec?.Z ?? 0);
+      }
+
+      return polyline;
+    }
+
+    // Rhino Mesh IO 
+    public static IntPtr ToNativeMesh(Mesh mesh)
+    {
+      // Convert vertices to array of doubles
+      double[] vertices = new double[mesh.Vertices.Count * 3];
+      for (int i = 0; i < mesh.Vertices.Count; i++)
+      {
+        vertices[i * 3] = mesh.Vertices[i].X;
+        vertices[i * 3 + 1] = mesh.Vertices[i].Y;
+        vertices[i * 3 + 2] = mesh.Vertices[i].Z;
+      }
+
+      // Convert faces to array of ints
+      int[] faces = new int[mesh.Faces.Count * 3];
+      for (int i = 0; i < mesh.Faces.Count; i++)
+      {
+        faces[i * 3] = mesh.Faces[i].A;
+        faces[i * 3 + 1] = mesh.Faces[i].B;
+        faces[i * 3 + 2] = mesh.Faces[i].C;
+      }
+
+      // Use the native function to create the mesh buffer
+      return NativeBridge.CreateMeshBuffer(
+          vertices,
+          (UIntPtr)mesh.Vertices.Count,
+          faces,
+          (UIntPtr)(mesh.Faces.Count * 3)
+      );
+    }
+
+    public static Mesh FromNativeMesh(IntPtr bufferPtr)
     {
       // Get buffer size and copy
       var bufferSize = (int)NativeBridge.GetBufferSize(bufferPtr);
@@ -77,10 +115,11 @@ namespace GeoBridgeNET
       for (int i = 0; i < meshData.VerticesLength; i++)
       {
         var vec = meshData.Vertices(i);
+        // Updated line to handle potential null value
         mesh.Vertices.Add(
-            (float)vec.Value.X,
-            (float)vec.Value.Y,
-            (float)vec.Value.Z);
+            x: (float)(vec?.X ?? 0),
+            y: (float)(vec?.Y ?? 0),
+            z: (float)(vec?.Z ?? 0));
       }
 
       // Add faces
@@ -95,15 +134,5 @@ namespace GeoBridgeNET
       return mesh;
     }
 
-    // Process geometry example
-    public static Mesh ProcessMesh(Mesh input)
-    {
-      var inputBuffer = ToNativeBuffer(input);
-      var outputBuffer = NativeBridge.ProcessGeometry(
-          inputBuffer,
-          (UIntPtr)Marshal.SizeOf(typeof(byte)) * (UIntPtr)inputBuffer);
-
-      return FromNativeBuffer(outputBuffer);
-    }
   }
 }

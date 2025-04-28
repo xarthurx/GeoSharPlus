@@ -52,6 +52,9 @@ namespace GeoBridgeNET
     [DllImport(WindowsLibName, EntryPoint = "free_buffer", CallingConvention = CallingConvention.Cdecl)]
     private static extern void FreeBufferWindows(IntPtr buffer);
 
+    [DllImport(MacOSLibName, EntryPoint = "free_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void FreeBufferMacOS(IntPtr buffer);
+
     public static void FreeBuffer(IntPtr buffer)
     {
       if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -61,24 +64,5 @@ namespace GeoBridgeNET
     }
 
 
-
-    // ProcessGeometry
-    [DllImport(MacOSLibName, EntryPoint = "free_buffer", CallingConvention = CallingConvention.Cdecl)]
-    private static extern void FreeBufferMacOS(IntPtr buffer);
-
-
-    [DllImport(WindowsLibName, EntryPoint = "process_geometry", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr ProcessGeometryWindows(IntPtr inputBuffer, UIntPtr bufferSize);
-
-    [DllImport(MacOSLibName, EntryPoint = "process_geometry", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr ProcessGeometryMacOS(IntPtr inputBuffer, UIntPtr bufferSize);
-
-    public static IntPtr ProcessGeometry(IntPtr inputBuffer, UIntPtr bufferSize)
-    {
-      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        return ProcessGeometryWindows(inputBuffer, bufferSize);
-      else
-        return ProcessGeometryMacOS(inputBuffer, bufferSize);
-    }
   }
 }

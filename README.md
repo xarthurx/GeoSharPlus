@@ -32,7 +32,10 @@ Now you can open the `GeoBridgeDemoGH.sln` solution file in Visual Studio and bu
 The most important two sub folders are `GeoBridgeCPP` and `GeoBridgeNET`.
 You should copy them into your own project, and run the above steps in the #Setup section.
 
-You can then create your Grasshopper or Rhino plugin project, or any other C# project and import the above two sub-projects in.
+You can then create your Grasshopper or Rhino plugin project, or any other C# project, then do:
+
+1. import the above two sub-projects in;
+1. Right-click your main project -> `Add` -> `Project Reference...` -> Select the `GeoBridgeNET` project;
 
 
 ## License
