@@ -160,3 +160,18 @@ if(WIN32)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
 endif()
+
+############################################
+# Post-build steps
+############################################
+# Create bin directory if it doesn't exist
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
+
+# Add post-build command to copy the DLL to the bin directory
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy 
+        $<TARGET_FILE:${PROJECT_NAME}> 
+        "${CMAKE_CURRENT_SOURCE_DIR}/../bin/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
+    COMMENT "Copying ${PROJECT_NAME} DLL to bin directory"
+)
