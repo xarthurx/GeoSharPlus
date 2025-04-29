@@ -18,4 +18,8 @@
 		</Compile>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Remove="..\generated\GeoBridgeFB\csharp\GeoBridgeFB\Vector3d.cs" />
+	</ItemGroup>
+
 </Project>

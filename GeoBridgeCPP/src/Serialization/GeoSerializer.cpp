@@ -9,7 +9,7 @@ namespace GeoBridgeCPP::Serialization {
 std::vector<uint8_t> serializePointArray(const std::vector<Vector3d>& points) {
   flatbuffers::FlatBufferBuilder builder(1024);
   // Convert Eigen data to FlatBuffer vectors
-  std::vector<GeoBridgeFB::Vector3d> pointVector;
+  std::vector<GeoBridgeFB::Vec3> pointVector;
   pointVector.reserve(points.size());
   for (const auto& p : points) {
     pointVector.emplace_back(p.x(), p.y(), p.z());
@@ -22,11 +22,11 @@ std::vector<uint8_t> serializePointArray(const std::vector<Vector3d>& points) {
 
 std::vector<Vector3d> deserializePointArray(const uint8_t* data, size_t size) {
   auto pointArray =
-      flatbuffers::GetRoot<flatbuffers::Vector<GeoBridgeFB::Vector3d>>(data);
+      flatbuffers::GetRoot<flatbuffers::Vector<GeoBridgeFB::Vec3>>(data);
   std::vector<Vector3d> points;
   points.reserve(pointArray->size());
   for (size_t i = 0; i < pointArray->size(); ++i) {
-    const GeoBridgeFB::Vector3d& p =
+    const GeoBridgeFB::Vec3& p =
         pointArray->Get(i);  // Fix: Use reference instead of pointer
     points.emplace_back(p.x(), p.y(), p.z());
   }
@@ -37,7 +37,7 @@ std::vector<uint8_t> serializePolyline(const Polyline& polyline) {
   flatbuffers::FlatBufferBuilder builder(1024);
 
   // Convert Eigen data to FlatBuffer vectors
-  std::vector<GeoBridgeFB::Vector3d> pointVector;
+  std::vector<GeoBridgeFB::Vec3> pointVector;
   pointVector.reserve(polyline.vertices.rows());
   for (int i = 0; i < polyline.vertices.rows(); ++i) {
     pointVector.emplace_back(polyline.vertices(i, 0), polyline.vertices(i, 1),
@@ -67,45 +67,53 @@ Polyline deserializePolyline(const uint8_t* data, size_t size) {
   return polyline;
 }
 
-std::vector<uint8_t> serializeMesh(const Mesh& mesh) {
-  flatbuffers::FlatBufferBuilder builder(1024);
-
-  // Convert Eigen data to FlatBuffer vectors
-  std::vector<GeoBridgeFB::Vector3d> vertexVector;
-  vertexVector.reserve(mesh.V.rows());
-  for (int i = 0; i < mesh.V.rows(); ++i) {
-    vertexVector.emplace_back(mesh.V(i, 0), mesh.V(i, 1), mesh.V(i, 2));
-  }
-  auto V = builder.CreateVectorOfStructs(vertexVector);
-
-  std::vector<int32_t> faceVector(mesh.F.data(), mesh.F.data() + mesh.F.size());
-  auto F = builder.CreateVector(faceVector);
-
-  auto meshData =
-      GeoBridgeFB::CreateMeshDataDirect(builder, &vertexVector, &faceVector);
-
-  builder.Finish(meshData);
-  return {builder.GetBufferPointer(),
-          builder.GetBufferPointer() + builder.GetSize()};
-}
-
-Mesh deserializeMesh(const uint8_t* data, size_t size) {
-  auto meshData = flatbuffers::GetRoot<GeoBridgeFB::MeshData>(data);
-
-  Mesh mesh;
-  mesh.V.resize(meshData->vertices()->size(), 3);
-  for (size_t i = 0; i < meshData->vertices()->size(); ++i) {
-    const auto* v =
-        meshData->vertices()->Get(i);  // Fix: Use pointer dereference
-    mesh.V(i, 0) = v->x();
-    mesh.V(i, 1) = v->y();
-    mesh.V(i, 2) = v->z();
-  }
-
-  mesh.F.resize(meshData->faces()->size() / 3, 3);
-  std::memcpy(mesh.F.data(), meshData->faces()->data(),
-              meshData->faces()->size() * sizeof(int32_t));
-
-  return mesh;
-}
+//std::vector<uint8_t> serializeMesh(const Mesh& mesh) {
+//  flatbuffers::FlatBufferBuilder builder(1024);
+//
+//  // Convert Eigen data to FlatBuffer vectors
+//  std::vector<GeoBridgeFB::Vec3> vertexVector;
+//  vertexVector.reserve(mesh.V.rows());
+//  for (int i = 0; i < mesh.V.rows(); ++i) {
+//    vertexVector.emplace_back(mesh.V(i, 0), mesh.V(i, 1), mesh.V(i, 2));
+//  }
+//  auto V = builder.CreateVectorOfStructs(vertexVector);
+//
+//  std::vector<GeoBridgeFB::Int3> faceVector;
+//  faceVector.reserve(mesh.F.rows());
+//  for (int i = 0; i < mesh.F.rows(); ++i) {
+//    faceVector.emplace_back(mesh.F(i, 0), mesh.F(i, 1), mesh.F(i, 2));
+//  }
+//  auto F = builder.CreateVector(faceVector);
+//
+//  auto meshData =
+//      GeoBridgeFB::CreateMeshDataDirect(builder, &vertexVector, &faceVector);
+//
+//  builder.Finish(meshData);
+//  return {builder.GetBufferPointer(),
+//          builder.GetBufferPointer() + builder.GetSize()};
+//}
+//
+//Mesh deserializeMesh(const uint8_t* data, size_t size) {
+//  auto meshData = flatbuffers::GetRoot<GeoBridgeFB::MeshData>(data);
+//
+//  Mesh mesh;
+//  mesh.V.resize(meshData->vertices()->size(), 3);
+//  for (size_t i = 0; i < meshData->vertices()->size(); ++i) {
+//    const auto* v =
+//        meshData->vertices()->Get(i);  // Fix: Use pointer dereference
+//    mesh.V(i, 0) = v->x();
+//    mesh.V(i, 1) = v->y();
+//    mesh.V(i, 2) = v->z();
+//  }
+//
+//  mesh.F.resize(meshData->faces()->size(), 3);
+//  for (size_t i = 0; i < meshData->faces()->size(); ++i) {
+//    const auto* f = meshData->faces()->Get(i);
+//    mesh.F(i, 0) = f->x();
+//    mesh.F(i, 1) = f->y();
+//    mesh.F(i, 2) = f->z();
+//  }
+//
+//  return mesh;
+//}
 }  // namespace GeoBridgeCPP::Serialization

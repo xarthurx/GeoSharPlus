@@ -14,7 +14,7 @@ std::vector<uint8_t> serializePolyline(const Polyline& polyline);
 Polyline deserializePolyline(const uint8_t* data, size_t size);
 
 // Mesh serialization
-std::vector<uint8_t> serializeMesh(const Mesh& mesh);
-Mesh deserializeMesh(const uint8_t* data, size_t size);
+//std::vector<uint8_t> serializeMesh(const Mesh& mesh);
+//Mesh deserializeMesh(const uint8_t* data, size_t size);
 
 }  // namespace GeoBridgeCPP::Serialization

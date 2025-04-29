@@ -103,8 +103,6 @@ execute_process(
     COMMAND ${flatbuffers_FLATC_EXECUTABLE}
     --csharp
     --scoped-enums
-    --cs-gen-json-serializer
-    --gen-object-api
     -o "${FLATBUFFERS_OUTPUT_DIR}/csharp"
     "${FLATBUFFERS_SCHEMA}"
     RESULT_VARIABLE FLATC_CSHARP_RESULT

@@ -8,33 +8,75 @@ using GB = GeoBridgeNET;
 
 namespace GeoBridgeDemoGH
 {
-  public class GeoBridgeDemoGHComponent : GH_Component
+
+  public class DemoPointRoundTrip : GH_Component
   {
     protected override System.Drawing.Bitmap Icon => null;
-    public override Guid ComponentGuid => new Guid("8ea30250-d74b-4061-9250-ec4c29f966e1");
+    public override Guid ComponentGuid => new Guid("4d4d80b0-3434-441e-b5b2-675b8eef8282");
 
-    public GeoBridgeDemoGHComponent()
-      : base("Point Averager", "Avg",
-        "Calculates the average of a collection of points using GeoBridgeNET",
+    public DemoPointRoundTrip()
+      : base("Point RoundTrip", "GB_pt",
+        "Conduct a round trip of C# -> Cpp -> C# for a single Rhino point.",
         "GeoBridge", "Examples")
     {
     }
 
     protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
     {
-      pManager.AddCurveParameter("Polyline", "P", "A polyline.", GH_ParamAccess.item);
+      pManager.AddPointParameter("Point", "Pin", "A Rhino point as input.", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
     {
-      pManager.AddCurveParameter("Polyline", "P", "A polyline.", GH_ParamAccess.item);
+      pManager.AddPointParameter("Point", "Pout", "A Rhino point as output.", GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      // Input retrieval
+      Point3d pt = new Point3d();
+      if (!DA.GetData(0, ref pt))
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No points provided.");
+        return;
+      }
+
+      var ptr = GB.GeoMarshal.ToNativePoint3d(pt);
+
+      var backPt = GB.GeoMarshal.FromNativePoint3d(ptr);
+
+      DA.SetData(0, backPt);
+    }
+
+  }
+
+  public class GeoBridgeDemoGHComponent : GH_Component
+  {
+    protected override System.Drawing.Bitmap Icon => null;
+    public override Guid ComponentGuid => new Guid("8ea30250-d74b-4061-9250-ec4c29f966e1");
+
+    public GeoBridgeDemoGHComponent()
+      : base("Poly RoundTrip", "GB_poly",
+        "Conduct a round trip of C# -> Cpp -> C# for a single Rhino polyline.",
+        "GeoBridge", "Examples")
+    {
+    }
+
+    protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+    {
+      pManager.AddCurveParameter("Polyline", "Cin", "A polyline as input.", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+    {
+      pManager.AddCurveParameter("Polyline", "Cout", "A polyline as output.", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       // Input retrieval
       //var crv = new PolylineCurve();
-      Curve crv = null; 
+      Curve crv = null;
       if (!DA.GetData(0, ref crv))
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No points provided.");

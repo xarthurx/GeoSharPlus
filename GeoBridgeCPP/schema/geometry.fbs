@@ -1,17 +1,29 @@
 namespace GeoBridgeFB;
 
-struct Vector3d {
-    x:double;
-    y:double;
-    z:double;
+struct Vec3 {
+	x:double;
+	y:double;
+	z:double;
 }
+
+struct Int3 {
+    x:int;
+    y:int;
+    z:int;
+}
+
+table Point3dData {
+    vec: Vec3;
+}
+root_type Point3dData;
 
 table PolylineData {
-    vertices:[Vector3d];
+    vertices:[Vec3];
 }
+root_type PolylineData;
 
 table MeshData {
-    vertices:[Vector3d];
-    faces:[int];  // Flattened face indices
-    face_stride:uint = 3;  // Triangles by default
+    vertices:[Vec3];
+    faces:[Int3];
 }
+root_type MeshData;

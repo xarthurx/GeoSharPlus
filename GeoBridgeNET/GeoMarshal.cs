@@ -8,6 +8,46 @@ namespace GeoBridgeNET
 {
   public static class GeoMarshal
   {
+    // Rhino Point3D - Simplest Example
+    public static IntPtr ToNativePoint3d(Point3d pt)
+    {
+      var builder = new FlatBufferBuilder(24); // Enough for a single Vector3d
+
+      // Create a Vector3d in the FlatBuffer
+      FB.Point3dData.StartPoint3dData(builder);
+      var vecOffset = FB.Vec3.CreateVec3(builder, pt.X, pt.Y, pt.Z);
+      FB.Point3dData.AddVec(builder, vecOffset);
+      var offset = FB.Point3dData.EndPoint3dData(builder);
+
+      // Finish the buffer with the root table offset
+      builder.Finish(offset.Value);
+
+      // Now get the completed buffer
+      var buf = builder.DataBuffer;
+      var vec3d = FB.Point3dData.GetRootAsPoint3dData(buf);
+
+      // Get the bytes and send to native code
+      var bytes = builder.SizedByteArray();
+      return NativeBridge.CreatePoint3dBuffer(bytes, (UIntPtr)bytes.Length);
+    }
+
+    public static Point3d FromNativePoint3d(IntPtr bufferPtr)
+    {
+      // Get buffer size and copy
+      var bufferSize = (int)NativeBridge.GetBufferSize(bufferPtr);
+      var byteArray = new byte[bufferSize];
+      Marshal.Copy(bufferPtr, byteArray, 0, bufferSize);
+      NativeBridge.FreeBuffer(bufferPtr);
+
+      // Parse FlatBuffers data
+      var byteBuffer = new ByteBuffer(byteArray);
+      var vec = FB.Point3dData.GetRootAsPoint3dData(byteBuffer).Vec;
+
+      // Create Rhino Point3d from the Vector3d
+      return vec == null ? new Point3d(0, 0, 0) : new Point3d(vec.Value.X, vec.Value.Y, vec.Value.Z);
+    }
+
+
     // Rhino Polyline IO
     public static IntPtr ToNativePolyline(Polyline polyline)
     {
@@ -125,7 +165,6 @@ namespace GeoBridgeNET
       for (int i = 0; i < meshData.VerticesLength; i++)
       {
         var vec = meshData.Vertices(i);
-        // Updated line to handle potential null value
         mesh.Vertices.Add(
             x: (float)(vec?.X ?? 0),
             y: (float)(vec?.Y ?? 0),
@@ -135,10 +174,11 @@ namespace GeoBridgeNET
       // Add faces
       for (int i = 0; i < meshData.FacesLength; i += 3)
       {
+        var face = meshData.Faces(i);
         mesh.Faces.AddFace(
-            meshData.Faces(i),
-            meshData.Faces(i + 1),
-            meshData.Faces(i + 2));
+          face?.X ?? 0,
+          face?.Y ?? 0,
+          face?.Z ?? 0);
       }
 
       return mesh;

@@ -10,6 +10,21 @@ namespace GeoBridgeNET
 
     // For each function, we create 3 functions: Windows, macOS implementations, and the public API
 
+    // CreatePoint3dBuffer
+    [DllImport(WindowsLibName, EntryPoint = "create_point3d_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr CreatePoint3dBufferWindows(byte[] buffer, UIntPtr size);
+
+    [DllImport(MacOSLibName, EntryPoint = "create_point3d_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr CreatePoint3dBufferMacOS(byte[] buffer, UIntPtr size);
+
+    public static IntPtr CreatePoint3dBuffer(byte[] buffer, UIntPtr size)
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        return CreatePoint3dBufferWindows(buffer, size);
+      else
+        return CreatePoint3dBufferMacOS(buffer, size);
+    }
+
     // CreatePolylineBuffer
     [DllImport(WindowsLibName, EntryPoint = "create_polyline_buffer", CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr CreatePolylineBufferWindows(
