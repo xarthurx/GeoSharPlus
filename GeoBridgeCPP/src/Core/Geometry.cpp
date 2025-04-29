@@ -20,10 +20,6 @@ double Polyline::length() const {
     total += (vertices.row(i) - vertices.row(i - 1)).norm();
   }
 
-  if (isClosed && n > 1) {
-    total += (vertices.row(0) - vertices.row(n - 1)).norm();
-  }
-
   return total;
 }
 

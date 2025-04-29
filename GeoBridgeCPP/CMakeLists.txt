@@ -148,7 +148,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Eigen3::Eigen
     igl::igl_core
     flatbuffers::flatbuffers
-    # Threads::Threads
 )
 
 # No need to add dependency since we generate at configure time
@@ -165,13 +164,14 @@ endif()
 # Post-build steps
 ############################################
 # Create bin directory if it doesn't exist
-file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
+# file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../cppPrebuild")
 
 # Add post-build command to copy the DLL to the bin directory
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy 
         $<TARGET_FILE:${PROJECT_NAME}> 
-        "${CMAKE_CURRENT_SOURCE_DIR}/../bin/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../cppPrebuild/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
     COMMENT "Copying ${PROJECT_NAME} DLL to bin directory"
 )

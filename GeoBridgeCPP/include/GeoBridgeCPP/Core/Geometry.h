@@ -6,7 +6,6 @@
 namespace GeoBridgeCPP {
 struct Polyline {
   MatrixX3d vertices;
-  bool isClosed;
   double length() const;
 };
 

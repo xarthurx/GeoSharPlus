@@ -1,9 +1,10 @@
 #pragma once
 #include "GeoBridgeCPP/Core/Macro.h"
+#include <cstdint>
 
 extern "C" {
-GEOBRIDGE_API void* GEOBRIDGE_CALL create_polyline_buffer(
-    const double* vertices, size_t vertex_count, bool isClosed);
+GEOBRIDGE_API void* GEOBRIDGE_CALL create_polyline_buffer(const uint8_t* buffer,
+                                                          size_t size);
 
 GEOBRIDGE_API void* GEOBRIDGE_CALL create_mesh_buffer(const double* vertices,
                                                       size_t vertex_count,

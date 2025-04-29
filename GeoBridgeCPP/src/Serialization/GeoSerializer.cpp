@@ -56,9 +56,9 @@ Polyline deserializePolyline(const uint8_t* data, size_t size) {
   auto polylineData = flatbuffers::GetRoot<GeoBridgeFB::PolylineData>(data);
 
   Polyline polyline;
-  polyline.vertices.resize(polylineData->points()->size(), 3);
-  for (size_t i = 0; i < polylineData->points()->size(); ++i) {
-    const auto* p = polylineData->points()->Get(i);
+  polyline.vertices.resize(polylineData->vertices()->size(), 3);
+  for (size_t i = 0; i < polylineData->vertices()->size(); ++i) {
+    const auto* p = polylineData->vertices()->Get(i);
     polyline.vertices(i, 0) = p->x();
     polyline.vertices(i, 1) = p->y();
     polyline.vertices(i, 2) = p->z();

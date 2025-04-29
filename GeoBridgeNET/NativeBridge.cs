@@ -5,10 +5,29 @@ namespace GeoBridgeNET
 {
   public static class NativeBridge
   {
-    private const string WindowsLibName = "GeoBridgeCPP.dll";
-    private const string MacOSLibName = "libGeoBridgeCPP.dylib";
+    private const string WindowsLibName = @"GeoBridgeCPP.dll";
+    private const string MacOSLibName = @"GeoBridgeCPP.dylib";
 
     // For each function, we create 3 functions: Windows, macOS implementations, and the public API
+
+    // CreatePolylineBuffer
+    [DllImport(WindowsLibName, EntryPoint = "create_polyline_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr CreatePolylineBufferWindows(
+        [MarshalAs(UnmanagedType.LPArray)] byte[] buffer,
+        UIntPtr size);
+
+    [DllImport(MacOSLibName, EntryPoint = "create_polyline_buffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr CreatePolylineBufferMacOS(
+        [MarshalAs(UnmanagedType.LPArray)] byte[] buffer,
+        UIntPtr size);
+
+    public static IntPtr CreatePolylineBuffer(byte[] buffer, UIntPtr size)
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        return CreatePolylineBufferWindows(buffer, size);
+      else
+        return CreatePolylineBufferMacOS(buffer, size);
+    }
 
     // CreateMeshBuffer
     [DllImport(WindowsLibName, EntryPoint = "create_mesh_buffer", CallingConvention = CallingConvention.Cdecl)]
@@ -62,7 +81,5 @@ namespace GeoBridgeNET
       else
         FreeBufferMacOS(buffer);
     }
-
-
   }
 }

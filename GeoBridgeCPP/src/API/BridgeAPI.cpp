@@ -5,17 +5,11 @@
 
 extern "C" {
 
-GEOBRIDGE_API void* GEOBRIDGE_CALL create_polyline_buffer(
-    const double* vertices, size_t vertex_count, bool isClosed) {
-  GeoBridgeCPP::Polyline polyline;
-  polyline.vertices =
-      Eigen::Map<const GeoBridgeCPP::MatrixX3d>(vertices, vertex_count, 3);
-  polyline.isClosed = isClosed;
-
-  auto buffer = new std::vector<uint8_t>(
-      GeoBridgeCPP::Serialization::serializePolyline(polyline));
-
-  return buffer;
+GEOBRIDGE_API void* GEOBRIDGE_CALL create_polyline_buffer(const uint8_t* buffer,
+                                                          size_t size) {
+  // Simply copy the buffer since it's already a valid FlatBuffer
+  auto result = new std::vector<uint8_t>(buffer, buffer + size);
+  return result;
 }
 
 GEOBRIDGE_API void* GEOBRIDGE_CALL create_mesh_buffer(const double* vertices,

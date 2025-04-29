@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 using GB = GeoBridgeNET;
 
@@ -32,16 +33,22 @@ namespace GeoBridgeDemoGH
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       // Input retrieval
-      var poly = new Polyline();
-      if (!DA.GetData(0, ref poly) || poly.Count == 0)
+      //var crv = new PolylineCurve();
+      Curve crv = null; 
+      if (!DA.GetData(0, ref crv))
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No points provided.");
         return;
       }
 
-      var ptr = GB.GeometryMarshal.ToNativePolyline(poly);
+      if (!crv.TryGetPolyline(out Polyline poly))
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Curve is not a polyline");
+      }
 
-      var backPoly = GB.GeometryMarshal.FromNativePolyline(ptr);
+      var ptr = GB.GeoMarshal.ToNativePolyline(poly);
+
+      var backPoly = GB.GeoMarshal.FromNativePolyline(ptr);
 
       DA.SetData(0, backPoly);
     }

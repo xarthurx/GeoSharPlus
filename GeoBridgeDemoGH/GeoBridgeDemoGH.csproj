@@ -45,4 +45,11 @@
 	  <ProjectReference Include="..\GeoBridgeNET\GeoBridgeNET.csproj" />
 	</ItemGroup>
 
+	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+	  <Exec Command="powershell -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; '$(MSBuildThisFileDirectory)prebuild.ps1' -TargetDir '$(TargetDir)' -SolutionDir '$(SolutionDir)'&quot;" /> 
+	</Target>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	  <Exec Command="powershell -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; '$(MSBuildThisFileDirectory)postbuild.ps1' -TargetDir '$(TargetDir)' -SolutionDir '$(SolutionDir)'&quot;" />
+	</Target>
+
 </Project>

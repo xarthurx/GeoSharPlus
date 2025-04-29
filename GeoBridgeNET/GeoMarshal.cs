@@ -6,35 +6,45 @@ using FB = GeoBridgeFB;
 
 namespace GeoBridgeNET
 {
-  public static class GeometryMarshal
+  public static class GeoMarshal
   {
     // Rhino Polyline IO
     public static IntPtr ToNativePolyline(Polyline polyline)
     {
       var builder = new FlatBufferBuilder(1024);
+
       // Serialize vertices
       var verticesOffset = default(VectorOffset);
       if (polyline.Count > 0)
       {
-        FB.MeshData.StartVerticesVector(builder, polyline.Count);
-        // Add vertices in reverse order (important!)
+        // Start the vertices vector - specify size of struct (24 bytes) and count
+        FB.PolylineData.StartVerticesVector(builder, polyline.Count);
+
+        // Add vertices in reverse order (FlatBuffers builds vectors backward)
         for (int i = polyline.Count - 1; i >= 0; i--)
         {
           var v = polyline[i];
-          FB.Vector3d.CreateVector3d(builder, v.X, v.Y, v.Z);
+          // For structs in vectors, we add them directly to the buffer
+          builder.AddDouble(v.Z); // Values are written in reverse order
+          builder.AddDouble(v.Y);
+          builder.AddDouble(v.X);
         }
+
+        // End the vector and get its offset
         verticesOffset = builder.EndVector();
       }
+
       // Build final polyline
       var polylineOffset = FB.PolylineData.CreatePolylineData(
           builder,
           verticesOffset);
+
+      // Finish the buffer
       builder.Finish(polylineOffset.Value);
-      // Copy to unmanaged memory
-      var byteArray = builder.SizedByteArray();
-      IntPtr bufferPtr = Marshal.AllocCoTaskMem(byteArray.Length);
-      Marshal.Copy(byteArray, 0, bufferPtr, byteArray.Length);
-      return bufferPtr;
+
+      // Get the bytes and send to native code
+      var bytes = builder.SizedByteArray();
+      return NativeBridge.CreatePolylineBuffer(bytes, (UIntPtr)bytes.Length);
     }
 
     public static Polyline FromNativePolyline(IntPtr bufferPtr)
@@ -53,9 +63,9 @@ namespace GeoBridgeNET
       var polyline = new Polyline();
 
       // Add vertices
-      for (int i = 0; i < polylineData.PointsLength; i++)
+      for (int i = 0; i < polylineData.VerticesLength; i++)
       {
-        var vec = polylineData.Points(i);
+        var vec = polylineData.Vertices(i);
         // Handle potential null value
         polyline.Add(
             x: vec?.X ?? 0,
