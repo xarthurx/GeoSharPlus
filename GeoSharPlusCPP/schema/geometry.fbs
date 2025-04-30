@@ -1,0 +1,26 @@
+namespace GSP.FB;
+
+struct Vec3 { x:double; y:double; z:double; }
+struct Int3 { x:int; y:int; z:int; }
+
+table PointData { point: Vec3; }
+
+table PointArrayData { points:[Vec3]; }
+
+table MeshData {
+    vertices:[Vec3];
+    faces:[Int3];
+}
+
+// Data Wrapper Definition
+
+union Data { PointData, PointArrayData, MeshData }
+enum DataType: byte { Unknown, Point, PointArray, Mesh }
+
+
+table GeoBridgeWrapper {
+	data: Data;
+}
+
+
+root_type GeoBridgeWrapper; // Single root

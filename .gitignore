@@ -43,3 +43,6 @@ generated
 GeoBridgeNET/bin
 GeoBridgeDemoGH/bin
 bin
+GeoSharPlusNET/obj
+GSPdemoGH/obj
+GSPdemoConsole/obj
