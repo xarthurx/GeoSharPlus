@@ -13,13 +13,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Include="..\generated\GeoBridgeFB\csharp\**\*.cs">
+		<Compile Include="..\generated\GSP_FB\csharp\**\*.cs">
 			<Link>Generated\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</Compile>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Compile Remove="..\generated\GeoBridgeFB\csharp\GeoBridgeFB\Vector3d.cs" />
 	</ItemGroup>
 
 </Project>

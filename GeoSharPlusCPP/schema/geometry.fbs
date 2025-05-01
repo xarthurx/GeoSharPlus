@@ -18,9 +18,9 @@ union Data { PointData, PointArrayData, MeshData }
 enum DataType: byte { Unknown, Point, PointArray, Mesh }
 
 
-table GeoBridgeWrapper {
+table GSPWrapper {
 	data: Data;
 }
 
 
-root_type GeoBridgeWrapper; // Single root
+root_type GSPWrapper; // Single root

@@ -68,7 +68,7 @@ message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 ###########################################
 # FlatBuffers code generation setup
 set(FLATBUFFERS_SCHEMA "${CMAKE_CURRENT_SOURCE_DIR}/schema/geometry.fbs")
-set(FLATBUFFERS_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../generated/GeoBridgeFB")
+set(FLATBUFFERS_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../generated/GSP_FB")
 
 # Create output directories
 file(MAKE_DIRECTORY "${FLATBUFFERS_OUTPUT_DIR}")
@@ -94,10 +94,6 @@ if(NOT FLATC_CPP_RESULT EQUAL 0)
 endif()
 
 # C# version with proper namespace
-message(STATUS "Creating temporary schema with C# namespace...")
-string(REPLACE "namespace GeoSharPlusCPP.FB;" "namespace GeoBridgeNET.FB;" SCHEMA_CONTENT_CSHARP "${SCHEMA_CONTENT}")
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/temp_geometry_csharp.fbs" "${SCHEMA_CONTENT_CSHARP}")
-
 message(STATUS "Generating Flatbuffers C# code...")
 execute_process(
     COMMAND ${flatbuffers_FLATC_EXECUTABLE}

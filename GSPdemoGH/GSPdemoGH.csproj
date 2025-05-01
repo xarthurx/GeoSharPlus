@@ -17,9 +17,9 @@
 	<PropertyGroup>
 		<!-- Specifies information for Assembly and Yak -->
 		<Version>1.0</Version>
-		<Title>GeoBridgeDemoGH</Title>
-		<Company>GeoBridgeDemoGH Authors</Company>
-		<Description>Description of GeoBridgeDemoGH</Description>
+		<Title>GSPdemoGH</Title>
+		<Company>GSPdemoGH Authors</Company>
+		<Description>Description of GSPdemoGH</Description>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -42,7 +42,7 @@
 		<PackageReference Include="System.Drawing.Common" Version="7.0.0" ExcludeAssets="runtime" />
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\GeoBridgeNET\GSP.NET.csproj" />
+	  <ProjectReference Include="..\GeoSharPlusNET\GeoSharPlusNET.csproj" />
 	</ItemGroup>
 
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">

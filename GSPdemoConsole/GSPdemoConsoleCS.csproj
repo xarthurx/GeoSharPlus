@@ -7,16 +7,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="GeoSharPlusCPPGeoSharPlusCPP.dll" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\GeoBridgeNET\GSP.NET.csproj" />
-  </ItemGroup>
-
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="powershell -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; '$(MSBuildThisFileDirectory)prebuild.ps1' -TargetDir '$(TargetDir)' -SolutionDir '$(SolutionDir)'&quot;" />
   </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoSharPlusNET\GeoSharPlusNET.csproj" />
+  </ItemGroup>
 
 </Project>

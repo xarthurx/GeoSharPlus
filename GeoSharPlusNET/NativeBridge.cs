@@ -1,7 +1,7 @@
 //using System;
 using System.Runtime.InteropServices;
 
-namespace GeoBridgeNET
+namespace GSP
 {
   public static class NativeBridge
   {
@@ -11,18 +11,18 @@ namespace GeoBridgeNET
     // For each function, we create 3 functions: Windows, macOS implementations, and the public API
 
     // CreatePoint3dBuffer
-    [DllImport(WindowsLibName, EntryPoint = "create_point3d_buffer", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr CreatePoint3dBufferWindows(byte[] buffer, UIntPtr size);
+    [DllImport(WindowsLibName, EntryPoint = "point3d_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Point3dRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
     [DllImport(MacOSLibName, EntryPoint = "create_point3d_buffer", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr CreatePoint3dBufferMacOS(byte[] buffer, UIntPtr size);
+    private static extern void Point3dRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
-    public static IntPtr CreatePoint3dBuffer(byte[] buffer, UIntPtr size)
+    public static void Point3dRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize)
     {
       if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        return CreatePoint3dBufferWindows(buffer, size);
+        Point3dRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
       else
-        return CreatePoint3dBufferMacOS(buffer, size);
+        Point3dRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
     }
 
     // CreatePolylineBuffer

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
-using GB = GeoBridgeNET;
+using GB = GSP;
 
 namespace GeoBridgeDemoGH
 {

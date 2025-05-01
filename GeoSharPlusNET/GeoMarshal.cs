@@ -2,60 +2,11 @@ using System;
 using System.Runtime.InteropServices;
 using Google.FlatBuffers;
 using Rhino.Geometry;
-using FB = GeoBridgeFB;
 
-namespace GeoBridgeNET
+namespace GSP
 {
-  public static class GspWrapper
-  {
-    public static ByteBuffer ToPointBuffer(Point3d pt)
-    {
-      var builder = new FlatBufferBuilder(24); // Enough for a single Vector3d
-
-      // Create a Vector3d in the FlatBuffer
-      FB.PointData.StartPointData(builder);
-      var vecOffset = FB.Vec3.CreateVec3(builder, pt.X, pt.Y, pt.Z);
-      FB.PointData.AddVec(builder, vecOffset);
-      var offset = FB.PointData.EndPointData(builder);
-
-      // Finish the buffer with the root table offset
-      var wrapper = FB.GeoBridgeWrapper.CreateGeoBridgeWrapper(builder, FB.Data.PointData, offset.Value);
-      builder.Finish(wrapper.Value);
-
-      // Now get the completed buffer
-      var buf = builder.DataBuffer;
-
-      return buf;
-    }
-  }
-
   public static class GeoMarshal
   {
-    // Rhino Point3D - Simplest Example
-    public static IntPtr ToNativePoint3d(Point3d pt)
-    {
-      var builder = new FlatBufferBuilder(24); // Enough for a single Vector3d
-
-      // Create a Vector3d in the FlatBuffer
-      FB.PointData.StartPointData(builder);
-      var vecOffset = FB.Vec3.CreateVec3(builder, pt.X, pt.Y, pt.Z);
-      FB.PointData.AddVec(builder, vecOffset);
-      var offset = FB.PointData.EndPointData(builder);
-
-      // Finish the buffer with the root table offset
-      var wrapper = FB.GeoBridgeWrapper.CreateGeoBridgeWrapper(builder, FB.Data.PointData, offset.Value);
-      builder.Finish(wrapper.Value);
-
-      // Now get the completed buffer
-      var buf = builder.DataBuffer;
-      var vec3d = FB.GeoBridgeWrapper.GetRootAsGeoBridgeWrapper(buf);
-      var ptData = vec3d.DataAsPointData();
-
-      // Get the bytes and send to native code
-      var bytes = builder.SizedByteArray();
-
-      return NativeBridge.CreatePoint3dBuffer(bytes, (UIntPtr)bytes.Length);
-    }
 
     public static Point3d FromNativePoint3d(IntPtr bufferPtr)
     {
@@ -67,10 +18,10 @@ namespace GeoBridgeNET
 
       // Parse FlatBuffers data
       var byteBuffer = new ByteBuffer(byteArray);
-      var vec = FB.GeoBridgeWrapper.GetRootAsGeoBridgeWrapper(byteBuffer);
+      var vec = FB.GSPWrapper.GetRootAsGSPWrapper(byteBuffer);
 
       var pt = vec.DataAsPointData();
-      var val = pt.Vec.Value;
+      var val = pt.Point.Value;
 
       // Create Rhino Point3d from the Vector3d
       return new Point3d(val.X, val.Y, val.Z);
@@ -87,7 +38,7 @@ namespace GeoBridgeNET
       if (polyline.Count > 0)
       {
         // Start the vertices vector - specify size of struct (24 bytes) and count
-        FB.PointArrayData.StartVerticesVector(builder, polyline.Count);
+        FB.PointArrayData.StartPointsVector(builder, polyline.Count);
 
         // Add vertices in reverse order (FlatBuffers builds vectors backward)
         for (int i = polyline.Count - 1; i >= 0; i--)
@@ -132,9 +83,9 @@ namespace GeoBridgeNET
       var polyline = new Polyline();
 
       // Add vertices
-      for (int i = 0; i < polylineData.VerticesLength; i++)
+      for (int i = 0; i < polylineData.PointsLength; i++)
       {
-        var vec = polylineData.Vertices(i);
+        var vec = polylineData.Points(i);
         // Handle potential null value
         polyline.Add(
             x: vec?.X ?? 0,
