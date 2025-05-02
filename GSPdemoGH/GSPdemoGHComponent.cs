@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 
 namespace GSPdemoGH
@@ -22,12 +21,12 @@ namespace GSPdemoGH
 
     protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
     {
-      pManager.AddPointParameter("MeshIn", "meshIn", "An input mesh from Rhino.", GH_ParamAccess.item);
+      pManager.AddMeshParameter("MeshIn", "meshIn", "An input mesh from Rhino.", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
     {
-      pManager.AddPointParameter("MeshOut", "meshOut", "Converted Rhino mesh from the cpp side.", GH_ParamAccess.item);
+      pManager.AddMeshParameter("MeshOut", "meshOut", "Converted Rhino mesh from the cpp side.", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -40,9 +39,22 @@ namespace GSPdemoGH
         return;
       }
       var buf = GSP.Wrapper.ToMeshBuffer(mesh);
-      var resMesh = GSP.Wrapper.FromMeshBuffer(buf);
+      GSP.NativeBridge.MeshRoundTrip(buf, buf.Length, out IntPtr outBuf, out int outSize);
 
-      DA.SetData("MeshOut", resMesh);
+      var byteArray = new byte[outSize];
+      Marshal.Copy(outBuf, byteArray, 0, outSize);
+      Marshal.FreeCoTaskMem(outBuf); // Free the unmanaged memory
+
+      // Convert the byte buffer back to a Mesh
+      var resMesh = GSP.Wrapper.FromMeshBuffer(byteArray);
+      if (resMesh.IsValid)
+      {
+        DA.SetData("MeshOut", resMesh);
+      }
+      else
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Output mesh is not valid.");
+      }
     }
   }
 }

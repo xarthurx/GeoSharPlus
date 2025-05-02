@@ -14,9 +14,9 @@ namespace GS = GeoSharPlusCPP::Serialization;
 extern "C" {
 
 GEOSHARPLUS_API bool GEOSHARPLUS_CALL point3d_roundtrip(const uint8_t* inBuffer,
-                                                    int inSize,
-                                                    uint8_t** outBuffer,
-                                                    int* outSize) {
+                                                        int inSize,
+                                                        uint8_t** outBuffer,
+                                                        int* outSize) {
   *outBuffer = nullptr;
   *outSize = 0;
 
@@ -37,10 +37,8 @@ GEOSHARPLUS_API bool GEOSHARPLUS_CALL point3d_roundtrip(const uint8_t* inBuffer,
   return true;
 }
 
-GEOSHARPLUS_API bool GEOSHARPLUS_CALL point3d_array_roundtrip(const uint8_t* inBuffer,
-                                                       int inSize,
-                                                       uint8_t** outBuffer,
-                                                       int* outSize) {
+GEOSHARPLUS_API bool GEOSHARPLUS_CALL point3d_array_roundtrip(
+    const uint8_t* inBuffer, int inSize, uint8_t** outBuffer, int* outSize) {
   *outBuffer = nullptr;
   *outSize = 0;
 
@@ -61,4 +59,27 @@ GEOSHARPLUS_API bool GEOSHARPLUS_CALL point3d_array_roundtrip(const uint8_t* inB
   return true;
 }
 
+GEOSHARPLUS_API bool GEOSHARPLUS_CALL mesh_roundtrip(const uint8_t* inBuffer,
+                                                     int inSize,
+                                                     uint8_t** outBuffer,
+                                                     int* outSize) {
+  *outBuffer = nullptr;
+  *outSize = 0;
+
+  GeoSharPlusCPP::Mesh mesh;
+  if (!GS::deserializeMesh(inBuffer, inSize, mesh)) {
+    return false;
+  }
+
+  // Serialize the mesh into the allocated buffer
+  if (!GS::serializeMesh(mesh, *outBuffer, *outSize)) {
+    if (*outBuffer) delete[] *outBuffer;  // Cleanup
+    *outBuffer = nullptr;
+    *outSize = 0;
+
+    return false;
+  }
+
+  return true;
+}
 }  // namespace GeoSharPlusCPP::Serialization

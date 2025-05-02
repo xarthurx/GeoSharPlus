@@ -96,7 +96,7 @@ namespace GSP
       for (int i = triangulatedMesh.Faces.Count - 1; i >= 0; i--)
       {
         var face = triangulatedMesh.Faces[i];
-        FB.Vec3.CreateVec3(builder, face.A, face.B, face.C); // Using Vec3 to store three integers
+        FB.Vec3i.CreateVec3i(builder, face.A, face.B, face.C); // Using Vec3 to store three integers
       }
       var facesOffset = builder.EndVector();
 
@@ -130,12 +130,15 @@ namespace GSP
         var face = meshData.Faces(i);
         if (face.HasValue)
         {
-          mesh.Faces.AddFace((int)face.Value.X, (int)face.Value.Y, (int)face.Value.Z);
+          mesh.Faces.AddFace(face.Value.X, face.Value.Y, face.Value.Z);
         }
       }
 
-      mesh.Normals.ComputeNormals();
-      mesh.Compact();
+      if (mesh.IsValid)
+      {
+        mesh.RebuildNormals();
+        mesh.Compact();
+      }
 
       return mesh;
     }

@@ -167,9 +167,8 @@ bool deserializeMesh(const uint8_t* data, int size, Mesh& mesh) {
   mesh.V.resize(vertices->size(), 3);
   for (size_t i = 0; i < vertices->size(); i++) {
     auto vertex = vertices->Get(i);
-    mesh.V(i, 0) = vertex->x();
-    mesh.V(i, 1) = vertex->y();
-    mesh.V(i, 2) = vertex->z();
+    mesh.V.row(i) =
+        Eigen::Vector3d(vertex->x(), vertex->y(), vertex->z()).transpose();
   }
 
   // Extract faces
@@ -180,9 +179,8 @@ bool deserializeMesh(const uint8_t* data, int size, Mesh& mesh) {
   mesh.F.resize(faces->size(), 3);
   for (size_t i = 0; i < faces->size(); i++) {
     auto face = faces->Get(i);
-    mesh.F(i, 0) = face->x();
-    mesh.F(i, 1) = face->y();
-    mesh.F(i, 2) = face->z();
+    mesh.F.row(i) =
+        Eigen::Vector3i(face->x(), face->y(), face->z()).transpose();
   }
 
   // Extract colors if present

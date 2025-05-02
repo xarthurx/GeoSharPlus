@@ -17,7 +17,6 @@ namespace GSPdemoConsole
       // Testing Functions  
       TestPoint3dRoundTrip();
       TestPoint3dArrayRoundTrip();
-      TestMeshRoundTrip();
 
       // Wait for user input before closing
       Console.ForegroundColor = ConsoleColor.Gray;
