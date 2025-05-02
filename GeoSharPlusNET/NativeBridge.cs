@@ -35,6 +35,20 @@ namespace GSP
       else
         return Point3dArrayRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
     }
+    // Mesh Round Trip -- Passing a Mesh to C++ and back
+    [DllImport(WinLibName, EntryPoint = "mesh_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    private static extern bool MeshRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
+    [DllImport(MacLibName, EntryPoint = "mesh_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    private static extern bool MeshRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
+    public static bool MeshRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize)
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        return MeshRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
+      else
+        return MeshRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
+    }
+
+
 
   }
 }

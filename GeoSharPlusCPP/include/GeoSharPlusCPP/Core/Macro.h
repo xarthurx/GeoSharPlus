@@ -1,13 +1,13 @@
 #pragma once
 
 #ifdef _WIN32
-    #ifdef GEOBRIDGE_EXPORTS
-        #define GEOBRIDGE_API __declspec(dllexport)
+    #ifdef GEOSHARPLUS_EXPORTS
+        #define GEOSHARPLUS_API __declspec(dllexport)
     #else
-        #define GEOBRIDGE_API __declspec(dllimport)
+        #define GEOSHARPLUS_API __declspec(dllimport)
     #endif
-    #define GEOBRIDGE_CALL __stdcall
+    #define GEOSHARPLUS_CALL __stdcall
 #else
-    #define GEOBRIDGE_API __attribute__((visibility("default")))
-    #define GEOBRIDGE_CALL
+    #define GEOSHARPLUS_API __attribute__((visibility("default")))
+    #define GEOSHARPLUS_CALL
 #endif

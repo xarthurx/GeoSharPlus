@@ -70,5 +70,77 @@ namespace GSP
       }
       return res;
     }
+    // Mesh IO
+    public static byte[] ToMeshBuffer(Mesh mesh)
+    {
+      var builder = new FlatBufferBuilder(1024);
+
+      // Triangulate the mesh if it's not already triangulated
+      Mesh triangulatedMesh = mesh.DuplicateMesh();
+      if (!triangulatedMesh.Faces.TriangleCount.Equals(triangulatedMesh.Faces.Count))
+      {
+        triangulatedMesh.Faces.ConvertQuadsToTriangles();
+      }
+
+      // Add vertices
+      FB.MeshData.StartVerticesVector(builder, triangulatedMesh.Vertices.Count);
+      for (int i = triangulatedMesh.Vertices.Count - 1; i >= 0; i--)
+      {
+        var vertex = triangulatedMesh.Vertices[i];
+        FB.Vec3.CreateVec3(builder, vertex.X, vertex.Y, vertex.Z);
+      }
+      var verticesOffset = builder.EndVector();
+
+      // Add faces (triangles)
+      FB.MeshData.StartFacesVector(builder, triangulatedMesh.Faces.Count);
+      for (int i = triangulatedMesh.Faces.Count - 1; i >= 0; i--)
+      {
+        var face = triangulatedMesh.Faces[i];
+        FB.Vec3.CreateVec3(builder, face.A, face.B, face.C); // Using Vec3 to store three integers
+      }
+      var facesOffset = builder.EndVector();
+
+      // Create the mesh data
+      var meshOffset = FB.MeshData.CreateMeshData(builder, verticesOffset, facesOffset);
+      builder.Finish(meshOffset.Value);
+
+      return builder.SizedByteArray();
+    }
+
+    public static Mesh FromMeshBuffer(byte[] buffer)
+    {
+      var byteBuffer = new ByteBuffer(buffer);
+      var meshData = FB.MeshData.GetRootAsMeshData(byteBuffer);
+
+      var mesh = new Mesh();
+
+      // Add vertices
+      for (int i = 0; i < meshData.VerticesLength; i++)
+      {
+        var vertex = meshData.Vertices(i);
+        if (vertex.HasValue)
+        {
+          mesh.Vertices.Add(vertex.Value.X, vertex.Value.Y, vertex.Value.Z);
+        }
+      }
+
+      // Add faces
+      for (int i = 0; i < meshData.FacesLength; i++)
+      {
+        var face = meshData.Faces(i);
+        if (face.HasValue)
+        {
+          mesh.Faces.AddFace((int)face.Value.X, (int)face.Value.Y, (int)face.Value.Z);
+        }
+      }
+
+      mesh.Normals.ComputeNormals();
+      mesh.Compact();
+
+      return mesh;
+    }
+
+    // Mesh IO
+
   }
 }

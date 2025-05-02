@@ -13,7 +13,7 @@ namespace GS = GeoSharPlusCPP::Serialization;
 
 extern "C" {
 
-GEOBRIDGE_API bool GEOBRIDGE_CALL point3d_roundtrip(const uint8_t* inBuffer,
+GEOSHARPLUS_API bool GEOSHARPLUS_CALL point3d_roundtrip(const uint8_t* inBuffer,
                                                     int inSize,
                                                     uint8_t** outBuffer,
                                                     int* outSize) {
@@ -37,7 +37,7 @@ GEOBRIDGE_API bool GEOBRIDGE_CALL point3d_roundtrip(const uint8_t* inBuffer,
   return true;
 }
 
-GEOBRIDGE_API bool GEOBRIDGE_CALL point3d_array_roundtrip(const uint8_t* inBuffer,
+GEOSHARPLUS_API bool GEOSHARPLUS_CALL point3d_array_roundtrip(const uint8_t* inBuffer,
                                                        int inSize,
                                                        uint8_t** outBuffer,
                                                        int* outSize) {

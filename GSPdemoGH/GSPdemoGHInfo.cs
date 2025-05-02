@@ -3,17 +3,17 @@ using System.Drawing;
 using Grasshopper;
 using Grasshopper.Kernel;
 
-namespace GeoBridgeDemoGH
+namespace  GSPdemoGH
 {
-    public class GeoBridgeDemoGHInfo : GH_AssemblyInfo
+    public class GSPdemoGHInfo : GH_AssemblyInfo
     {
-        public override string Name => "GeoBridgeDemoGH";
+        public override string Name => "GSPdemoGH";
 
         //Return a 24x24 pixel bitmap to represent this GHA library.
         public override Bitmap Icon => null;
 
         //Return a short string describing the purpose of this GHA library.
-        public override string Description => "A demo GH plugin project for the GeoBridgeRHGH.";
+        public override string Description => "A demo GH plugin project for the GeoSharPlus.";
 
         public override Guid Id => new Guid("66feb2ff-9edb-47c9-8418-3e98270bc29b");
 

@@ -15,5 +15,8 @@ bool serializePointArray(const std::vector<Vector3d>& points,
 bool deserializePointArray(const uint8_t* data, int size,
                            std::vector<Vector3d>& pointArray);
 
+// Mesh serialization
+bool serializeMesh(const Mesh& mesh, uint8_t*& resBuffer, int& resSize);
+bool deserializeMesh(const uint8_t* data, int size, Mesh& mesh);
 
 }  // namespace GeoSharPlusCPP::Serialization

@@ -154,7 +154,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Platform-specific configuration
 if(WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE GEOBRIDGE_EXPORTS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE GEOSHARPLUS_EXPORTS)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /EHsc)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)

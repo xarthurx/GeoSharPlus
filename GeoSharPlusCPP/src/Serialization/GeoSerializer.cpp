@@ -95,4 +95,107 @@ bool deserializePointArray(const uint8_t* data, int size,
 
   return true;
 }
+bool serializeMesh(const Mesh& mesh, uint8_t*& resBuffer, int& resSize) {
+  flatbuffers::FlatBufferBuilder builder;
+
+  // Convert vertices to flatbuffers compatible format
+  std::vector<GSP::FB::Vec3> vertices;
+  vertices.reserve(mesh.V.rows());
+  for (int i = 0; i < mesh.V.rows(); i++) {
+    vertices.emplace_back(mesh.V(i, 0), mesh.V(i, 1), mesh.V(i, 2));
+  }
+
+  // Convert faces to flatbuffers compatible format
+  std::vector<GSP::FB::Vec3i> faces;
+  faces.reserve(mesh.F.rows());
+  for (int i = 0; i < mesh.F.rows(); i++) {
+    faces.emplace_back(mesh.F(i, 0), mesh.F(i, 1), mesh.F(i, 2));
+  }
+
+  // Create vectors in flatbuffers
+  auto verticesVector = builder.CreateVectorOfStructs(vertices);
+  auto facesVector = builder.CreateVectorOfStructs(faces);
+
+  // Create colors vector if present
+  flatbuffers::Offset<flatbuffers::Vector<float>> colorsVector;
+  bool hasColors = mesh.C.size() > 0;
+  if (hasColors) {
+    std::vector<float> colors(mesh.C.data(), mesh.C.data() + mesh.C.size());
+    colorsVector = builder.CreateVector(colors);
+  }
+
+  // Create the mesh
+  GSP::FB::MeshDataBuilder meshBuilder(builder);
+  meshBuilder.add_vertices(verticesVector);
+  meshBuilder.add_faces(facesVector);
+  // if (hasColors) {
+  //   meshBuilder.add_colors(colorsVector);
+  //   meshBuilder.add_has_colors(true);
+  // }
+  auto meshOffset = meshBuilder.Finish();
+  builder.Finish(meshOffset);
+
+  // Copy the serialized data to the provided buffer
+  resSize = builder.GetSize();
+  resBuffer = static_cast<uint8_t*>(CoTaskMemAlloc(resSize));
+  if (!resBuffer) {
+    return false;  // Handle allocation failure
+  }
+  std::memcpy(resBuffer, builder.GetBufferPointer(), resSize);
+
+  return true;
+}
+
+bool deserializeMesh(const uint8_t* data, int size, Mesh& mesh) {
+  // Verify the buffer integrity
+  flatbuffers::Verifier verifier(data, size);
+  if (!verifier.VerifyBuffer<GSP::FB::MeshData>()) {
+    return false;
+  }
+
+  // Get the mesh data from the buffer
+  auto meshData = GSP::FB::GetMeshData(data);
+  if (!meshData) {
+    return false;
+  }
+
+  // Extract vertices
+  auto vertices = meshData->vertices();
+  if (!vertices) {
+    return false;
+  }
+  mesh.V.resize(vertices->size(), 3);
+  for (size_t i = 0; i < vertices->size(); i++) {
+    auto vertex = vertices->Get(i);
+    mesh.V(i, 0) = vertex->x();
+    mesh.V(i, 1) = vertex->y();
+    mesh.V(i, 2) = vertex->z();
+  }
+
+  // Extract faces
+  auto faces = meshData->faces();
+  if (!faces) {
+    return false;
+  }
+  mesh.F.resize(faces->size(), 3);
+  for (size_t i = 0; i < faces->size(); i++) {
+    auto face = faces->Get(i);
+    mesh.F(i, 0) = face->x();
+    mesh.F(i, 1) = face->y();
+    mesh.F(i, 2) = face->z();
+  }
+
+  // Extract colors if present
+  // if (meshData->has_colors() && meshData->colors()) {
+  //  auto colors = meshData->colors();
+  //  mesh.C.resize(colors->size());
+  //  for (size_t i = 0; i < colors->size(); i++) {
+  //    mesh.C(i) = colors->Get(i);
+  //  }
+  //} else {
+  //  mesh.C.resize(0);
+  //}
+
+  return true;
+}
 }  // namespace GeoSharPlusCPP::Serialization
