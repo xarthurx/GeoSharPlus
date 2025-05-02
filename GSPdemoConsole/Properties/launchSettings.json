@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GSPdemoConsole": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

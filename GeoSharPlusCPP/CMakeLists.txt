@@ -67,7 +67,7 @@ message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 # FLATBUFFER GENERATION
 ###########################################
 # FlatBuffers code generation setup
-set(FLATBUFFERS_SCHEMA "${CMAKE_CURRENT_SOURCE_DIR}/schema/geometry.fbs")
+file(GLOB FLATBUFFERS_SCHEMAS "${CMAKE_CURRENT_SOURCE_DIR}/schema/*.fbs")
 set(FLATBUFFERS_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../generated/GSP_FB")
 
 # Create output directories
@@ -75,40 +75,44 @@ file(MAKE_DIRECTORY "${FLATBUFFERS_OUTPUT_DIR}")
 file(MAKE_DIRECTORY "${FLATBUFFERS_OUTPUT_DIR}/cpp")
 file(MAKE_DIRECTORY "${FLATBUFFERS_OUTPUT_DIR}/csharp")
 
-# Create a temporary schema file with namespace for each language
-file(READ "${FLATBUFFERS_SCHEMA}" SCHEMA_CONTENT)
+# Process each schema file
+message(STATUS "Found schema files: ${FLATBUFFERS_SCHEMAS}")
+foreach(SCHEMA_FILE ${FLATBUFFERS_SCHEMAS})
+    get_filename_component(SCHEMA_NAME ${SCHEMA_FILE} NAME_WE)
+    message(STATUS "Processing schema: ${SCHEMA_NAME}")
+    
+    # Generate C++ code
+    message(STATUS "Generating Flatbuffers C++ code for ${SCHEMA_NAME}...")
+    execute_process(
+        COMMAND ${flatbuffers_FLATC_EXECUTABLE}
+        --cpp
+        --scoped-enums
+        -o "${FLATBUFFERS_OUTPUT_DIR}/cpp"
+        "${SCHEMA_FILE}"
+        RESULT_VARIABLE FLATC_CPP_RESULT
+    )
 
-# Generate C++ and C# code directly during configure time
-message(STATUS "Generating Flatbuffers C++ code...")
-execute_process(
-    COMMAND ${flatbuffers_FLATC_EXECUTABLE}
-    --cpp
-    --scoped-enums
-    -o "${FLATBUFFERS_OUTPUT_DIR}/cpp"
-    "${FLATBUFFERS_SCHEMA}"
-    RESULT_VARIABLE FLATC_CPP_RESULT
-)
+    if(NOT FLATC_CPP_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to generate C++ Flatbuffers code for ${SCHEMA_NAME}")
+    endif()
 
-if(NOT FLATC_CPP_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to generate C++ Flatbuffers code")
-endif()
+    # Generate C# code
+    message(STATUS "Generating Flatbuffers C# code for ${SCHEMA_NAME}...")
+    execute_process(
+        COMMAND ${flatbuffers_FLATC_EXECUTABLE}
+        --csharp
+        --scoped-enums
+        --gen-onefile
+        --gen-object-api
+        -o "${FLATBUFFERS_OUTPUT_DIR}/csharp"
+        "${SCHEMA_FILE}"
+        RESULT_VARIABLE FLATC_CSHARP_RESULT
+    )
 
-# C# version with proper namespace
-message(STATUS "Generating Flatbuffers C# code...")
-execute_process(
-    COMMAND ${flatbuffers_FLATC_EXECUTABLE}
-    --csharp
-    --scoped-enums
-    --gen-onefile
-    --gen-object-api
-    -o "${FLATBUFFERS_OUTPUT_DIR}/csharp"
-    "${FLATBUFFERS_SCHEMA}"
-    RESULT_VARIABLE FLATC_CSHARP_RESULT
-)
-
-if(NOT FLATC_CSHARP_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to generate C# Flatbuffers code")
-endif()
+    if(NOT FLATC_CSHARP_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to generate C# Flatbuffers code for ${SCHEMA_NAME}")
+    endif()
+endforeach()
 
 message(STATUS "Flatbuffers generation complete")
 

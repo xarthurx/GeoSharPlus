@@ -3,7 +3,9 @@
 #include <iostream>
 #include <memory>
 
-#include "GSP_FB/cpp/geometry_generated.h"
+#include "GSP_FB/cpp/mesh_generated.h"
+#include "GSP_FB/cpp/pointArray_generated.h"
+#include "GSP_FB/cpp/point_generated.h"
 #include "GeoSharPlusCPP/Core/MathTypes.h"
 #include "GeoSharPlusCPP/Serialization/GeoSerializer.h"
 
@@ -34,4 +36,29 @@ GEOBRIDGE_API bool GEOBRIDGE_CALL point3d_roundtrip(const uint8_t* inBuffer,
 
   return true;
 }
+
+GEOBRIDGE_API bool GEOBRIDGE_CALL point3d_array_roundtrip(const uint8_t* inBuffer,
+                                                       int inSize,
+                                                       uint8_t** outBuffer,
+                                                       int* outSize) {
+  *outBuffer = nullptr;
+  *outSize = 0;
+
+  std::vector<GeoSharPlusCPP::Vector3d> points;
+  if (!GS::deserializePointArray(inBuffer, inSize, points)) {
+    return false;
+  }
+
+  // Serialize the point array into the allocated buffer
+  if (!GS::serializePointArray(points, *outBuffer, *outSize)) {
+    if (*outBuffer) delete[] *outBuffer;  // Cleanup
+    *outBuffer = nullptr;
+    *outSize = 0;
+
+    return false;
+  }
+
+  return true;
 }
+
+}  // namespace GeoSharPlusCPP::Serialization
