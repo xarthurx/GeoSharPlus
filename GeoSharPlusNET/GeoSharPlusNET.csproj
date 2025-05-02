@@ -8,7 +8,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.FlatBuffers" Version="25.2.10" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="RhinoCommon" Version="8.0.23304.9001" />
 	</ItemGroup>
 
