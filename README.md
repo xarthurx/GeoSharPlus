@@ -34,7 +34,7 @@ Now you can open the `GSP.DEMO.sln` solution file in Visual Studio and build the
 **The most important two folders are `GeoSharPlusCPP` and `GeoSharPlusNET`.**
 
 ### Required steps:
-- Copy the above two mentioned folders into your own project, and do:
+Copy the above two mentioned folders into your own project, and do:
 1. Modify the `CMakeList.txt` file in the `GeoSharPlusCPP` folder to add:
   - any `cpp` lib that you want to use;
   - any additional pre-compilation process you want to integrate;
