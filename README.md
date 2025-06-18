@@ -45,5 +45,10 @@ In your Grasshopper or Rhino plugin project, you need to add the two sub-project
 - Right-click your main project -> `Add` -> `Project Reference...` -> Select the `GeoSharPlusNET` project;
 - Check the `prebuild.ps1` and `postbuild.ps1` scripts in the `GSPdemoGH` folder for additional *build event* and copy to your project.
 
+## Used by:
+This library is trusted by these notable projects:
+- [BeingAliveLanguage](https://beingalivelanguage.arch.ethz.ch)
+- [IG-Mesh](https://github.com/xarthurx/IG-Mesh)
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
