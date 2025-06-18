@@ -47,8 +47,8 @@ In your Grasshopper or Rhino plugin project, you need to add the two sub-project
 
 ## Used by:
 This library is trusted by these notable projects:
-- [BeingAliveLanguage](https://beingalivelanguage.arch.ethz.ch)
-- [IG-Mesh](https://github.com/xarthurx/IG-Mesh)
+- [BeingAliveLanguage](https://beingalivelanguage.arch.ethz.ch) - A Grasshopper plugin to create computational diagrams for living systems, visualizing soil information to enhance multidisciplinary communication.
+- [IG-Mesh](https://github.com/xarthurx/IG-Mesh) - An one-stop solution for mesh processing in Grasshopper (for Rhino), providing tools for low-level information extraction and high-level properties.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
