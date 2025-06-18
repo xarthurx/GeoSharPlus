@@ -34,11 +34,11 @@ Now you can open the `GSP.DEMO.sln` solution file in Visual Studio and build the
 **The most important two folders are `GeoSharPlusCPP` and `GeoSharPlusNET`.**
 
 ### Required steps:
-- Copy them into your own project, and run the above steps in the #Setup section.
-- Modify the `CMakeList.txt` file in the `GeoSharPlusCPP` folder to add:
+- Copy the above two mentioned folders into your own project, and do:
+1. Modify the `CMakeList.txt` file in the `GeoSharPlusCPP` folder to add:
   - any `cpp` lib that you want to use;
   - any additional pre-compilation process you want to integrate;
-- Conduct the processes described in the [Setup](#setup) section.
+1. Conduct the processes described in the [Setup](#setup) section.
 
 ### Additional steps:
 In your Grasshopper or Rhino plugin project, you need to add the two sub-projects:
