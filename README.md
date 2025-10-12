@@ -1,6 +1,6 @@
 ﻿# GeoSharPlus
 
-A high-performance C# ↔ C++ interoperability library for geometry data exchange using [FlatBuffers](https://flatbuffers.dev/). This library enables efficient serialization and transmission of geometric data between managed (.NET) and unmanaged (C++) environments, making it ideal for Grasshopper/Rhino plugins and CAD applications.
+A high-performance C# ↔ C++ interoperability library for geometry data exchange using [FlatBuffers](https://flatbuffers.dev/). Originally developed for the Rhino/Grasshopper platform, this library enables efficient serialization and transmission of geometric data between managed (.NET) and unmanaged (C++) environments. While designed with CAD applications in mind, it can be used independently in any scenario requiring high-performance geometry data exchange.
 
 ## Features
 
@@ -9,7 +9,7 @@ A high-performance C# ↔ C++ interoperability library for geometry data exchang
 - 📐 **Rich Geometry Support**: Points, point arrays, meshes, and more
 - 🛠 **Extensible**: Easy to add new geometric types
 - 🎯 **Cross-Platform**: Windows and macOS support
-- 🧩 **Rhino Integration**: Built-in support for Rhino geometry types
+- 🏗️ **CAD Integration**: Built-in support for CAD geometry types (currently Rhino, contributions for other CAD platforms welcome!)
 
 ## Quick Examples
 
@@ -349,11 +349,24 @@ Currently supported geometric types:
    - Your specific geometric operations
 3. Follow the [Setup](#setup) process
 
-### For Grasshopper/Rhino Plugins:
+### For CAD Plugin Development:
+
+**Rhino/Grasshopper Plugins:**
 
 1. **Add project reference**: Right-click your main project → `Add` → `Project Reference...` → Select `GeoSharPlusNET`
 2. **Copy build scripts**: Check `prebuild.ps1` and `postbuild.ps1` in `GSPdemoGH/` for build events
 3. **Deploy native libraries**: Ensure the compiled C++ DLLs are copied to your output directory
+
+**Other CAD Platforms:**
+We welcome contributions for integration with other CAD software! The core library is platform-agnostic and can be adapted for:
+
+- AutoCAD (.NET API)
+- SolidWorks (SOLIDWORKS API)
+- Fusion 360 (Fusion 360 API)
+- FreeCAD (Python/C++ API)
+- Other CAD platforms with .NET or C++ APIs
+
+_Interested in adding support for your CAD platform? Please open an issue or submit a pull request!_
 
 ## Performance Characteristics
 
