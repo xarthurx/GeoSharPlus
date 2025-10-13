@@ -1,7 +1,9 @@
 ﻿![GeoSharPlus Logo](logo.png)
 
 <div align="center">
-# GeoSharPlus
+
+GeoSharPlus
+
 </div>
 
 A high-performance, Win/Mac cross-platform, C# ↔ C++ interoperability library for geometry data exchange using [FlatBuffers](https://flatbuffers.dev/). Originally developed for the Rhino/Grasshopper platform, this library enables efficient serialization and transmission of geometric data between managed (.NET) and unmanaged (C++) environments. While designed with CAD applications in mind, it can be used independently in any scenario requiring high-performance geometry data exchange.
