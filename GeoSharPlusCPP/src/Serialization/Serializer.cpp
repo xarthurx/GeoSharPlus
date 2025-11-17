@@ -1,9 +1,10 @@
 #include "GeoSharPlusCPP/Serialization/Serializer.h"
 
 #ifdef _WIN32
-#include <combaseapi.h>  // Windows: CoTaskMemAlloc for COM interop
+  #include <combaseapi.h>  // Windows: CoTaskMemAlloc for COM interop
 #else
-#include <cstdlib>  // Unix/macOS: use malloc
+  #include <cstdlib>  // Unix/macOS: use malloc/free
+  #include <cstring>  // Unix/macOS: use memcpy
 #endif
 
 #include "GSP_FB/cpp/doubleArray_generated.h"
@@ -20,12 +21,27 @@
 namespace GeoSharPlusCPP::Serialization {
 // Cross-platform memory allocation for C# interop
 // On Windows: Use CoTaskMemAlloc (COM-compatible)
-// On Unix/macOS: Use malloc (compatible with P/Invoke Marshal.FreeCoTaskMem)
+// On Unix/macOS: Use standard malloc - .NET Core will handle it correctly with
+// Marshal.FreeCoTaskMem Note: On .NET Core/5+, Marshal.FreeCoTaskMem on Unix calls free()
+// internally, which properly pairs with malloc()
 inline void* AllocateInteropMemory(size_t size) {
 #ifdef _WIN32
   return CoTaskMemAlloc(size);
 #else
+  // On Unix/macOS, use malloc which pairs with .NET's Marshal.FreeCoTaskMem
+  // .NET Core runtime translates Marshal.FreeCoTaskMem to free() on non-Windows platforms
   return malloc(size);
+#endif
+}
+
+// Cross-platform memory deallocation for C# interop
+// This should only be used in error paths before the buffer is returned to C#
+// Once returned to C#, the memory MUST be freed by Marshal.FreeCoTaskMem
+inline void FreeInteropMemory(void* ptr) {
+#ifdef _WIN32
+  CoTaskMemFree(ptr);
+#else
+  free(ptr);
 #endif
 }
 
@@ -168,12 +184,12 @@ bool deserializeNumberArray(const uint8_t* data, int size, NumberContainer& numb
     if constexpr (std::is_same_v<NumberContainer, std::vector<int>>) {
       numberArray.clear();
       numberArray.reserve(values->size());
-      for (int i = 0; i < values->size(); i++) {
+      for (size_t i = 0; i < values->size(); i++) {
         numberArray.push_back(values->Get(i));
       }
     } else if constexpr (std::is_same_v<NumberContainer, Eigen::VectorXi>) {
       numberArray.resize(values->size());
-      for (int i = 0; i < values->size(); i++) {
+      for (size_t i = 0; i < values->size(); i++) {
         numberArray(i) = values->Get(i);
       }
     }
@@ -271,7 +287,7 @@ bool deserializeNumberPairArray(const uint8_t* data, int size, PairContainer& pa
       pairArray.reserve(pairs->size());
 
       // Fill with pairs
-      for (int i = 0; i < pairs->size(); i++) {
+      for (size_t i = 0; i < pairs->size(); i++) {
         auto pair = pairs->Get(i);
         pairArray.emplace_back(std::make_pair(pair->x(), pair->y()));
       }
@@ -441,37 +457,50 @@ bool serializeMesh(const Mesh& mesh, uint8_t*& resBuffer, int& resSize) {
   // Convert vertices to flatbuffers compatible format
   std::vector<GSP::FB::Vec3> vertices;
   vertices.reserve(mesh.V.rows());
-  for (int i = 0; i < mesh.V.rows(); i++) {
+  for (size_t i = 0; i < mesh.V.rows(); i++) {
     vertices.emplace_back(mesh.V(i, 0), mesh.V(i, 1), mesh.V(i, 2));
   }
 
-  // Convert faces to flatbuffers compatible format
-  std::vector<GSP::FB::Vec3i> faces;
-  faces.reserve(mesh.F.rows());
-  for (int i = 0; i < mesh.F.rows(); i++) {
-    faces.emplace_back(mesh.F(i, 0), mesh.F(i, 1), mesh.F(i, 2));
+  // Determine if this is a triangle or quad mesh
+  int faceCols = mesh.F.cols();
+  
+  flatbuffers::Offset<flatbuffers::Vector<const GSP::FB::Vec3i*>> facesVector;
+  flatbuffers::Offset<flatbuffers::Vector<const GSP::FB::Vec4i*>> quadFacesVector;
+  
+  if (faceCols == 3) {
+    // Triangle mesh - use existing Vec3i format
+    std::vector<GSP::FB::Vec3i> faces;
+    faces.reserve(mesh.F.rows());
+    for (size_t i = 0; i < mesh.F.rows(); i++) {
+      faces.emplace_back(mesh.F(i, 0), mesh.F(i, 1), mesh.F(i, 2));
+    }
+    facesVector = builder.CreateVectorOfStructs(faces);
+  } else if (faceCols == 4) {
+    // Quad mesh - use Vec4i format
+    std::vector<GSP::FB::Vec4i> quadFaces;
+    quadFaces.reserve(mesh.F.rows());
+    for (size_t i = 0; i < mesh.F.rows(); i++) {
+      quadFaces.emplace_back(mesh.F(i, 0), mesh.F(i, 1), mesh.F(i, 2), mesh.F(i, 3));
+    }
+    quadFacesVector = builder.CreateVectorOfStructs(quadFaces);
+  } else {
+    // Invalid face count
+    return false;
   }
 
-  // Create vectors in flatbuffers
+  // Create vertices vector
   auto verticesVector = builder.CreateVectorOfStructs(vertices);
-  auto facesVector = builder.CreateVectorOfStructs(faces);
 
-  // Create colors vector if present
-  flatbuffers::Offset<flatbuffers::Vector<float>> colorsVector;
-  bool hasColors = mesh.C.size() > 0;
-  if (hasColors) {
-    std::vector<float> colors(mesh.C.data(), mesh.C.data() + mesh.C.size());
-    colorsVector = builder.CreateVector(colors);
-  }
-
-  // Create the mesh
+  // Create the mesh with appropriate face data
   GSP::FB::MeshDataBuilder meshBuilder(builder);
   meshBuilder.add_vertices(verticesVector);
-  meshBuilder.add_faces(facesVector);
-  // if (hasColors) {
-  //   meshBuilder.add_colors(colorsVector);
-  //   meshBuilder.add_has_colors(true);
-  // }
+  
+  if (faceCols == 3) {
+    meshBuilder.add_faces(facesVector);
+  } else if (faceCols == 4) {
+    meshBuilder.add_quad_faces(quadFacesVector);
+  }
+  
   auto meshOffset = meshBuilder.Finish();
   builder.Finish(meshOffset);
 
@@ -505,32 +534,37 @@ bool deserializeMesh(const uint8_t* data, int size, Mesh& mesh) {
     return false;
   }
   mesh.V.resize(vertices->size(), 3);
-  for (int i = 0; i < vertices->size(); i++) {
+  for (size_t i = 0; i < vertices->size(); i++) {
     auto vertex = vertices->Get(i);
     mesh.V.row(i) = Eigen::Vector3d(vertex->x(), vertex->y(), vertex->z()).transpose();
   }
 
-  // Extract faces
-  auto faces = meshData->faces();
-  if (!faces) {
-    return false;
+  // Extract faces - check if we have triangle or quad faces
+  auto triFaces = meshData->faces();
+  auto quadFaces = meshData->quad_faces();
+  
+  if (quadFaces && quadFaces->size() > 0) {
+    // Quad mesh
+    mesh.F.resize(quadFaces->size(), 4);
+    for (size_t i = 0; i < quadFaces->size(); i++) {
+      auto face = quadFaces->Get(i);
+      mesh.F(i, 0) = face->x();
+      mesh.F(i, 1) = face->y();
+      mesh.F(i, 2) = face->z();
+      mesh.F(i, 3) = face->w();
+    }
+  } else if (triFaces && triFaces->size() > 0) {
+    // Triangle mesh
+    mesh.F.resize(triFaces->size(), 3);
+    for (size_t i = 0; i < triFaces->size(); i++) {
+      auto face = triFaces->Get(i);
+      mesh.F(i, 0) = face->x();
+      mesh.F(i, 1) = face->y();
+      mesh.F(i, 2) = face->z();
+    }
+  } else {
+    return false;  // No faces found
   }
-  mesh.F.resize(faces->size(), 3);
-  for (size_t i = 0; i < faces->size(); i++) {
-    auto face = faces->Get(i);
-    mesh.F.row(i) = Eigen::Vector3i(face->x(), face->y(), face->z()).transpose();
-  }
-
-  // Extract colors if present
-  // if (meshData->has_colors() && meshData->colors()) {
-  //  auto colors = meshData->colors();
-  //  mesh.C.resize(colors->size());
-  //  for (size_t i = 0; i < colors->size(); i++) {
-  //    mesh.C(i) = colors->Get(i);
-  //  }
-  //} else {
-  //  mesh.C.resize(0);
-  //}
 
   return true;
 }

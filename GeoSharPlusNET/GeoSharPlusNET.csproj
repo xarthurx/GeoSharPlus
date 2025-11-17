@@ -1,14 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<TargetFrameworks>net8.0</TargetFrameworks>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Google.FlatBuffers" Version="25.2.10" />
-		<PackageReference Include="RhinoCommon" Version="8.0.23304.9001" />
+		<PackageReference Include="KdTree" Version="1.4.1" />
+		<PackageReference Include="RhinoCommon" Version="8.21.25188.17001" />
 	</ItemGroup>
 
 	<ItemGroup>

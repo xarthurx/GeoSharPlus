@@ -1,13 +1,12 @@
-﻿using GSP;
-using Rhino.Geometry;
+﻿using Rhino.Geometry;
 using System.Runtime.InteropServices;
 
-namespace GeoSharpNET {
+namespace GSP {
 public static class MeshUtils {
   private static Point3d Centroid(Mesh mesh) {
     // Serialize the mesh for calling into GeoSharPlusCPP
     byte[] meshBuffer;
-    meshBuffer = GSP.Wrapper.ToMeshBuffer(mesh);
+    meshBuffer = Wrapper.ToMeshBuffer(mesh);
 
     // Call the C++ function to calculate centroid
     var success = NativeBridge.MeshCentroid(
@@ -84,7 +83,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes barycenter for each face of a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <returns>List of vertex normals</returns>
   public static List<Point3d> GetBarycenter(ref Mesh rMesh) {
@@ -170,7 +169,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes per-corner normals for a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="thresholdDegrees">Angle threshold in degrees for sharp
   /// features</param> <returns>List of lists of corner normals (one list per
@@ -215,7 +214,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes per-edge normals, edge indices, and edge map for a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="weightingType">Type of weighting: 0=uniform, 1=area</param>
   /// <returns>Tuple containing edge normals, edge indices, and edge map</returns>
@@ -301,7 +300,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Gets the vertex-triangle adjacency for a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <returns>Tuple containing vertex-triangle adjacency and vertex-triangle
   /// indices</returns> <exception cref="ArgumentNullException"></exception>
@@ -342,7 +341,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Gets the triangle-triangle adjacency for a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <returns>Tuple containing triangle-triangle adjacency and
   /// triangle-triangle indices</returns> <exception
@@ -384,7 +383,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Gets boundary loops for a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <returns>List of lists representing boundary loops</returns>
   /// <exception cref="ArgumentNullException"></exception>
@@ -414,7 +413,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Gets boundary edges for a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <returns>Tuple containing boundary edge geometry, edge indices,
   /// and triangle indices</returns> <exception
@@ -550,7 +549,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes principal curvature directions and values for a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="radius">Radius parameter for curvature computation</param>
   /// <returns>Tuple containing principal directions and values</returns>
@@ -609,7 +608,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes Gaussian curvature for each vertex of a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <returns>List of Gaussian curvature values</returns>
   /// <exception cref="ArgumentNullException"></exception>
@@ -640,7 +639,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes fast winding numbers for query points with respect to a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="queryPoints">Points to query</param>
   /// <returns>List of winding numbers</returns>
@@ -682,7 +681,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes signed distance from query points to a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="queryPoints">Points to query</param>
   /// <param name="signedType">Method for computing signed distance (1-4)</param>
@@ -742,7 +741,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes planarity values for quad faces in a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input quad mesh</param>
   /// <returns>List of planarity values</returns>
   /// <exception cref="ArgumentNullException"></exception>
@@ -750,8 +749,8 @@ public static class MeshUtils {
     if (mesh == null)
       throw new ArgumentNullException(nameof(mesh));
 
-    // Serialize mesh to buffer
-    var meshBuffer = Wrapper.ToMeshBuffer(mesh);
+    // Serialize mesh preserving quads
+    var meshBuffer = Wrapper.ToMeshBuffer(mesh, preserveQuads: true);
 
     // Call the native function
     var success = NativeBridge.IGM_quad_planarity(
@@ -773,7 +772,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Planarizes quad faces in a mesh.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input quad mesh</param>
   /// <param name="maxIterations">Maximum iterations for planarization</param>
   /// <param name="threshold">Threshold to stop planarization</param>
@@ -784,8 +783,8 @@ public static class MeshUtils {
     if (mesh == null)
       throw new ArgumentNullException(nameof(mesh));
 
-    // Serialize mesh to buffer
-    var meshBuffer = Wrapper.ToMeshBuffer(mesh);
+    // Serialize mesh preserving quads - critical for planarization to work
+    var meshBuffer = Wrapper.ToMeshBuffer(mesh, preserveQuads: true);
 
     // Call the native function
     var success = NativeBridge.IGM_planarize_quad_mesh(meshBuffer,
@@ -811,7 +810,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Solves Laplacian equation with given boundary constraints.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="constraintIndices">Indices of constrained vertices</param>
   /// <param name="constraintValues">Values for constrained vertices</param>
@@ -863,7 +862,7 @@ public static class MeshUtils {
   /// Maps a mesh to a flat 2D domain using harmonic coordinates.
   /// The boundary vertices are mapped to a circle and the interior vertices
   /// are positioned to minimize the Dirichlet energy.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="k">Order of harmonic coordinates (typically 1 for biharmonic)</param>
   /// <returns>UV coordinates as 3D points (Z coordinate is 0)</returns>
@@ -897,7 +896,7 @@ public static class MeshUtils {
   /// Precomputes data for heat-based geodesic distance calculations.
   /// This function computes and caches the necessary matrices for fast geodesic distance
   /// computation.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh for geodesic computations</param>
   /// <returns>Handle for the precomputed data (to be used with GetHeatGeodesicDistances)</returns>
   /// <exception cref="ArgumentNullException"></exception>
@@ -929,7 +928,7 @@ public static class MeshUtils {
   /// <summary>
   /// Computes heat-based geodesic distances from source vertices using precomputed data.
   /// This is the fast solving step that uses the precomputed factorization.
-  /// </summary>
+  /// /// </summary>
   /// <param name="precomputedHandle">Handle from GetHeatGeodesicPrecomputedData</param>
   /// <param name="sourceVertices">List of source vertex indices</param>
   /// <returns>Geodesic distances from sources to all vertices</returns>
@@ -970,7 +969,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Generates random or uniform distributed points on mesh surface.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="N">Number of points to generate</param>
   /// <param name="method">Sampling method: 0=random, 1=uniform</param>
@@ -1032,7 +1031,7 @@ public static class MeshUtils {
 
   /// <summary>
   /// Computes a constrained scalar field on mesh vertices using Laplacian smoothing.
-  /// </summary>
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="constraintIndices">Indices of constrained vertices</param>
   /// <param name="constraintValues">Values for constrained vertices</param>
@@ -1081,11 +1080,12 @@ public static class MeshUtils {
 
   /// <summary>
   /// Extracts isoline points from a scalar field defined on mesh vertices.
-  /// </summary>
+  /// Points are sorted into connected polylines for each isoline value.
+  /// /// </summary>
   /// <param name="mesh">Input mesh</param>
   /// <param name="meshScalar">Scalar values defined on vertices</param>
   /// <param name="isoValues">Isoline parameter values (typically in [0, 1])</param>
-  /// <returns>List of lists of points, one for each isoline</returns>
+  /// <returns>List of lists of points, one sorted polyline for each isoline</returns>
   /// <exception cref="ArgumentNullException"></exception>
   public static List<List<Point3d>>
   GetIsolineFromScalar(ref Mesh mesh, ref List<double> meshScalar, ref List<double> isoValues) {
@@ -1120,29 +1120,281 @@ public static class MeshUtils {
     Marshal.Copy(outBuffer, byteArray, 0, outSize);
     Marshal.FreeCoTaskMem(outBuffer);  // Free the unmanaged memory
 
-    // Deserialize the result - this will need special handling for nested point arrays
-    // For now, return a simple implementation that assumes the format matches the expected output
-    var isolinePoints = new List<List<Point3d>>();
-
-    // This is a simplified version - the actual implementation would need to handle
-    // the nested array structure based on how the C++ side serializes it
+    // Deserialize all points
     var allPoints = Wrapper.FromPointArrayBuffer(byteArray);
 
-    // Group points by isoline (this is a placeholder - needs proper implementation based on
-    // serialization format)
-    int pointsPerIsoline = allPoints.Length / isoValues.Count;
-    for (int i = 0; i < isoValues.Count; i++) {
-      var linePoints = new List<Point3d>();
-      int startIdx = i * pointsPerIsoline;
-      int endIdx = Math.Min(startIdx + pointsPerIsoline, allPoints.Length);
-
-      for (int j = startIdx; j < endIdx; j++) {
-        linePoints.Add(allPoints[j]);
-      }
-      isolinePoints.Add(linePoints);
+    if (allPoints.Length == 0) {
+      return new List<List<Point3d>>();
     }
 
-    return isolinePoints;
+    // Group points by isoline and sort them into connected polylines
+    int pointsPerIsoline = allPoints.Length / isoValues.Count;
+    var isolinePolylines = new List<List<Point3d>>();
+
+    for (int isoIdx = 0; isoIdx < isoValues.Count; isoIdx++) {
+      int startIdx = isoIdx * pointsPerIsoline;
+      int endIdx = Math.Min(startIdx + pointsPerIsoline, allPoints.Length);
+
+      if (startIdx >= endIdx) {
+        isolinePolylines.Add(new List<Point3d>());
+        continue;
+      }
+
+      // Extract points for this isoline
+      var isolinePoints = new List<Point3d>();
+      for (int j = startIdx; j < endIdx; j++) {
+        isolinePoints.Add(allPoints[j]);
+      }
+
+      // Sort points into a connected polyline using greedy nearest-neighbor
+      var sortedPolyline = SortPointsIntoPolyline(isolinePoints);
+      isolinePolylines.Add(sortedPolyline);
+    }
+
+    return isolinePolylines;
+  }
+
+  /// <summary>
+  /// Helper method to sort unordered points into a connected polyline.
+  /// Uses KD-tree for fast neighbor queries and direction clustering for endpoint detection.
+  /// Removes duplicate/overlapping points before sorting.
+  /// </summary>
+  private static List<Point3d> SortPointsIntoPolyline(List<Point3d> points) {
+    if (points.Count == 0)
+      return new List<Point3d>();
+    if (points.Count == 1)
+      return new List<Point3d>(points);
+
+    // Phase 1: Remove duplicate points
+    const double tolerance = 1e-6;
+    var uniquePoints = new List<Point3d>();
+
+    foreach (var point in points) {
+      bool isDuplicate = false;
+      foreach (var existing in uniquePoints) {
+        if (point.DistanceTo(existing) < tolerance) {
+          isDuplicate = true;
+          break;
+        }
+      }
+      if (!isDuplicate) {
+        uniquePoints.Add(point);
+      }
+    }
+
+    if (uniquePoints.Count == 0)
+      return new List<Point3d>();
+    if (uniquePoints.Count == 1)
+      return new List<Point3d>(uniquePoints);
+
+    // Phase 2: Build KD-tree for fast neighbor queries
+    var kdTree = new KdTree.KdTree<double, int>(3, new KdTree.Math.DoubleMath());
+    for (int i = 0; i < uniquePoints.Count; i++) {
+      var pt = uniquePoints[i];
+      kdTree.Add(new double[] { pt.X, pt.Y, pt.Z }, i);
+    }
+
+    // Phase 3: Find endpoint using direction clustering
+    int startIdx = FindPolylineEndpointWithClustering(uniquePoints, kdTree);
+
+    // Phase 4: Greedy nearest-neighbor sorting using KD-tree
+    var sorted = new List<Point3d>();
+    var remaining = new HashSet<int>(Enumerable.Range(0, uniquePoints.Count));
+
+    sorted.Add(uniquePoints[startIdx]);
+    remaining.Remove(startIdx);
+
+    while (remaining.Count > 0) {
+      Point3d current = sorted[sorted.Count - 1];
+
+      // Query KD-tree for K nearest neighbors
+      var nearest = kdTree.GetNearestNeighbours(new double[] { current.X, current.Y, current.Z },
+                                                Math.Min(10, uniquePoints.Count));
+
+      // Find closest unvisited neighbor
+      int nearestIdx = -1;
+      double minDist = double.MaxValue;
+
+      foreach (var neighbor in nearest) {
+        int idx = neighbor.Value;
+        if (remaining.Contains(idx)) {
+          double dist = current.DistanceTo(uniquePoints[idx]);
+          if (dist < minDist) {
+            minDist = dist;
+            nearestIdx = idx;
+          }
+        }
+      }
+
+      if (nearestIdx >= 0) {
+        sorted.Add(uniquePoints[nearestIdx]);
+        remaining.Remove(nearestIdx);
+      } else {
+        break;
+      }
+    }
+
+    return sorted;
+  }
+
+  /// <summary>
+  /// Finds an endpoint using direction clustering.
+  /// Points where all neighbors point in the same direction are endpoints.
+  /// </summary>
+  private static int FindPolylineEndpointWithClustering(List<Point3d> points,
+                                                        KdTree.KdTree<double, int> kdTree) {
+    if (points.Count <= 2)
+      return 0;
+
+    int bestEndpointIdx = 0;
+    double bestScore = double.MaxValue;
+    int K = Math.Min(8, points.Count - 1);  // Changed from const to var
+
+    for (int i = 0; i < points.Count; i++) {
+      Point3d current = points[i];
+
+      // Get K nearest neighbors
+      var nearest = kdTree.GetNearestNeighbours(new double[] { current.X, current.Y, current.Z },
+                                                K + 1  // +1 because it includes the point itself
+      );
+
+      // Extract neighbor directions (skip self)
+      var directions = new List<Vector3d>();
+      var distances = new List<double>();
+
+      foreach (var neighbor in nearest) {
+        int idx = neighbor.Value;
+        if (idx == i)
+          continue;
+
+        Point3d neighborPt = points[idx];
+        Vector3d dir = neighborPt - current;
+        double dist = dir.Length;
+
+        if (dist > 1e-10) {
+          dir.Unitize();
+          directions.Add(dir);
+          distances.Add(dist);
+        }
+      }
+
+      if (directions.Count == 0) {
+        continue;  // Skip isolated points
+      }
+
+      if (directions.Count == 1) {
+        // Only 1 neighbor - perfect endpoint
+        return i;
+      }
+
+      // Cluster directions by angular similarity
+      var clusters = ClusterDirections(directions, angleThresholdDeg: 45.0);
+
+      double score;
+
+      if (clusters.Count == 1) {
+        // All neighbors point same direction - ENDPOINT!
+        score = 0.0;
+      } else if (clusters.Count == 2) {
+        // Two clusters - check if opposite
+        Vector3d centroid1 = CalculateDirectionCentroid(clusters[0]);
+        Vector3d centroid2 = CalculateDirectionCentroid(clusters[1]);
+
+        double dotProduct = centroid1 * centroid2;
+        dotProduct = Math.Max(-1.0, Math.Min(1.0, dotProduct));
+        double angle = Math.Acos(dotProduct) * 180.0 / Math.PI;
+
+        if (angle >= 160.0 && angle <= 180.0) {
+          // Opposite directions - middle point
+          score = 180.0;
+        } else {
+          // Non-opposite - corner or endpoint
+          score = 90.0;
+        }
+      } else {
+        // 3+ clusters - irregular geometry, avoid as start
+        score = 200.0;
+      }
+
+      // Additional check: distance variance
+      if (distances.Count >= 2) {
+        double meanDist = distances.Average();
+        double variance = distances.Select(d => Math.Pow(d - meanDist, 2)).Average();
+        double stdDev = Math.Sqrt(variance);
+        double varianceScore = stdDev / (meanDist + 1e-10);
+
+        if (varianceScore > 1.5) {
+          // High variance = unbalanced = endpoint indicator
+          score = Math.Min(score, 30.0);
+        }
+      }
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestEndpointIdx = i;
+      }
+
+      // Early exit for perfect endpoint
+      if (score == 0.0) {
+        return bestEndpointIdx;
+      }
+    }
+
+    return bestEndpointIdx;
+  }
+
+  /// <summary>
+  /// Clusters direction vectors by angular similarity.
+  /// </summary>
+  private static List<List<Vector3d>> ClusterDirections(List<Vector3d> directions,
+                                                        double angleThresholdDeg) {
+    var clusters = new List<List<Vector3d>>();
+    double angleThresholdRad = angleThresholdDeg * Math.PI / 180.0;
+
+    foreach (var dir in directions) {
+      bool addedToCluster = false;
+
+      foreach (var cluster in clusters) {
+        Vector3d centroid = CalculateDirectionCentroid(cluster);
+        double dotProduct = dir * centroid;
+        dotProduct = Math.Max(-1.0, Math.Min(1.0, dotProduct));
+        double angle = Math.Acos(dotProduct);
+
+        if (angle < angleThresholdRad) {
+          cluster.Add(dir);
+          addedToCluster = true;
+          break;
+        }
+      }
+
+      if (!addedToCluster) {
+        clusters.Add(new List<Vector3d> { dir });
+      }
+    }
+
+    return clusters;
+  }
+
+  /// <summary>
+  /// Calculates the centroid (average direction) of a cluster of direction vectors.
+  /// </summary>
+  private static Vector3d CalculateDirectionCentroid(List<Vector3d> directions) {
+    if (directions.Count == 0)
+      return new Vector3d(1, 0, 0);
+
+    Vector3d sum = new Vector3d(0, 0, 0);
+    foreach (var dir in directions) {
+      sum += dir;
+    }
+
+    double length = sum.Length;
+    if (length > 1e-10) {
+      sum.Unitize();
+    } else {
+      sum = new Vector3d(1, 0, 0);
+    }
+
+    return sum;
   }
 }
-}  // namespace GeoSharpNET
+}  // namespace GSP
