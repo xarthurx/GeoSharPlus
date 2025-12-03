@@ -48,7 +48,7 @@ GeoSharPlus/
 │       └── extensions/          # ✅ YOUR SCHEMAS HERE
 │
 ├── GeoSharPlusNET/              # C# Wrapper Library
-│   ├── NativeBridge.cs          # ⚠️ UPSTREAM - Platform initialization
+│   ├── RuntimeInit.cs           # ⚠️ UPSTREAM - Platform initialization
 │   ├── Wrapper.cs               # ⚠️ UPSTREAM - FlatBuffers serialization
 │   └── Extensions/              # ✅ YOUR CODE HERE
 │       └── ExampleExtensions.cs # Example: Point/Mesh roundtrip

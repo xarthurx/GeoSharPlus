@@ -49,7 +49,7 @@ When you need upstream updates, use:
 
 ## C# Core Files (GeoSharPlusNET)
 
-- `NativeBridge.cs` - Platform initialization and library loading
+- `RuntimeInit.cs` - Platform initialization and library loading
 - `Wrapper.cs` - FlatBuffers wrapper utilities
 - `GeoSharPlusNET.csproj` - Project file
 

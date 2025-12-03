@@ -1,8 +1,8 @@
 // ============================================
-// GeoSharPlus Core NativeBridge
+// GeoSharPlus Runtime Initialization
 // ============================================
-// This file contains the core platform initialization for GeoSharPlus.
-// It handles cross-platform native library loading (Windows/macOS).
+// This file handles cross-platform native library loading (Windows/macOS).
+// It provides utilities for checking library status and error logging.
 //
 // For P/Invoke declarations, see:
 //   - GeoSharPlusNET/Extensions/ (example extensions)
@@ -14,10 +14,10 @@ using System.Runtime.InteropServices;
 namespace GSP {
   
 /// <summary>
-/// Core platform utilities for native library loading.
-/// Provides cross-platform support for Windows and macOS.
+/// Runtime initialization and platform utilities.
+/// Handles cross-platform native library loading for Windows and macOS.
 /// </summary>
-public static class NativeBridge {
+public static class RuntimeInit {
   public const string WinLibName = @"GeoSharPlusCPP.dll";
   public const string MacLibName = @"libGeoSharPlusCPP.dylib";
 
