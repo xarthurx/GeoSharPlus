@@ -2,21 +2,204 @@ name: GeoSharPlus CI
 
 on:
   push:
-    branches: [ main, master, develop, template-cleanup ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ main ]
   workflow_dispatch:
 
 env:
   DOTNET_VERSION: '8.0.x'
+  CPP_PROJECT: GeoSharPlusCPP
+  CPP_PREBUILD_DIR: cppPrebuild
 
 jobs:
   # ============================================
-  # Build and Test .NET Projects (No C++ dependency)
+  # Build C++ Library
   # ============================================
-  # This job tests the Core and Geometry classes which don't require
-  # the native C++ library. The generated FlatBuffer files are 
-  # already checked into the repository.
+  # This job builds the native C++ library using CMake presets and vcpkg.
+  # ============================================
+  build-cpp:
+    name: Build C++ (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            output-ext: ".dll"
+            output-path: "build/GeoSharPlusCPP.dll"
+            triplet: "x64-windows"
+            configure-preset: "windows-default"
+            build-preset: "windows-release"
+          - os: macos-latest
+            output-ext: ".dylib"
+            output-path: "build/libGeoSharPlusCPP.dylib"
+            triplet: "arm64-osx"
+            configure-preset: "macos-default"
+            build-preset: "macos-release"
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Generate cache key based on C++ source files
+      - name: Generate C++ Cache Key (macOS)
+        if: matrix.os == 'macos-latest'
+        id: cpp-cache-key
+        shell: bash
+        run: |
+          cpp_hash=$(find ${{ env.CPP_PROJECT }}/src ${{ env.CPP_PROJECT }}/include -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -exec shasum -a 256 {} \; 2>/dev/null | sort | shasum -a 256 | cut -d' ' -f1)
+          cmake_hash=$(shasum -a 256 ${{ env.CPP_PROJECT }}/CMakeLists.txt ${{ env.CPP_PROJECT }}/CMakePresets.json 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+          echo "hash=${cpp_hash:0:16}${cmake_hash:0:16}" >> $GITHUB_OUTPUT
+          echo "C++ source hash: ${cpp_hash:0:16}${cmake_hash:0:16}"
+
+      - name: Generate C++ Cache Key (Windows)
+        if: matrix.os == 'windows-latest'
+        id: cpp-cache-key-windows
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path "${{ env.CPP_PROJECT }}" -Recurse -Include *.cpp,*.h,*.hpp,CMakeLists.txt,CMakePresets.json | 
+            Where-Object { $_.FullName -notmatch '[\\/]build[\\/]' } |
+            Sort-Object FullName
+          
+          $hashInput = ""
+          foreach ($file in $files) {
+            $relativePath = $file.FullName.Replace("${{ github.workspace }}\", "").Replace("\", "/")
+            $contentHash = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash
+            $hashInput += "$relativePath`:$contentHash`n"
+          }
+          
+          $stringAsStream = [System.IO.MemoryStream]::new()
+          $writer = [System.IO.StreamWriter]::new($stringAsStream)
+          $writer.write($hashInput)
+          $writer.Flush()
+          $stringAsStream.Position = 0
+          $cpp_hash = (Get-FileHash -InputStream $stringAsStream -Algorithm SHA256).Hash.ToLower().Substring(0, 32)
+          
+          echo "hash=$cpp_hash" >> $env:GITHUB_OUTPUT
+          echo "C++ source hash: $cpp_hash"
+
+      # Try to restore C++ build from cache
+      - name: Cache C++ Build Artifacts
+        id: cache-cpp
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.CPP_PROJECT }}/build
+            ${{ env.CPP_PREBUILD_DIR }}
+          key: cpp-build-${{ matrix.os }}-${{ matrix.os == 'windows-latest' && steps.cpp-cache-key-windows.outputs.hash || steps.cpp-cache-key.outputs.hash }}
+          restore-keys: |
+            cpp-build-${{ matrix.os }}-
+
+      # Setup CMake (only if cache miss)
+      - name: Setup CMake
+        if: steps.cache-cpp.outputs.cache-hit != 'true'
+        uses: lukka/get-cmake@latest
+
+      # Setup vcpkg (only if cache miss)
+      - name: Setup vcpkg
+        if: steps.cache-cpp.outputs.cache-hit != 'true'
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: ce613c41372b23b1f51333815feb3edd87ef8a8b
+
+      # Configure and build using CMake presets (only if cache miss)
+      - name: Configure and Build with CMake
+        if: steps.cache-cpp.outputs.cache-hit != 'true'
+        uses: lukka/run-cmake@v10
+        with:
+          cmakeListsTxtPath: "${{ github.workspace }}/${{ env.CPP_PROJECT }}/CMakeLists.txt"
+          configurePreset: ${{ matrix.configure-preset }}
+          buildPreset: ${{ matrix.build-preset }}
+
+      # Create prebuild directory
+      - name: Create prebuild directory
+        if: steps.cache-cpp.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p ${{ env.CPP_PREBUILD_DIR }}
+
+      # Copy C++ artifacts (Windows)
+      - name: Copy C++ artifacts (Windows)
+        if: steps.cache-cpp.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "Copying C++ artifacts (Windows)..." -ForegroundColor Cyan
+          
+          $found = $false
+          
+          # Check the specified output path first
+          if (Test-Path "${{ github.workspace }}/${{ env.CPP_PROJECT }}/${{ matrix.output-path }}") {
+            Copy-Item "${{ github.workspace }}/${{ env.CPP_PROJECT }}/${{ matrix.output-path }}" -Destination "${{ env.CPP_PREBUILD_DIR }}/GeoSharPlusCPP${{ matrix.output-ext }}"
+            Write-Host "Copied from ${{ matrix.output-path }}" -ForegroundColor Green
+            $found = $true
+          }
+          # Check build/Release subdirectory
+          elseif (Test-Path "${{ github.workspace }}/${{ env.CPP_PROJECT }}/build/Release/GeoSharPlusCPP.dll") {
+            Copy-Item "${{ github.workspace }}/${{ env.CPP_PROJECT }}/build/Release/GeoSharPlusCPP.dll" -Destination "${{ env.CPP_PREBUILD_DIR }}/GeoSharPlusCPP${{ matrix.output-ext }}"
+            Write-Host "Copied from build/Release/" -ForegroundColor Green
+            $found = $true
+          }
+          
+          if (-not $found) {
+            Write-Host "Built library not found at expected locations" -ForegroundColor Red
+            Write-Host "Searching for DLL in build directory..." -ForegroundColor Yellow
+            Get-ChildItem -Path "${{ github.workspace }}/${{ env.CPP_PROJECT }}/build" -Recurse -Filter "*.dll" | ForEach-Object { 
+              Write-Host "  - $($_.FullName)" -ForegroundColor Gray
+            }
+            exit 1
+          }
+
+      # Copy C++ artifacts (macOS)
+      - name: Copy C++ artifacts (macOS)
+        if: steps.cache-cpp.outputs.cache-hit != 'true' && matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          echo "Copying C++ artifacts (macOS)..."
+          
+          found=false
+          
+          # Check the specified output path first
+          if [ -f "${{ github.workspace }}/${{ env.CPP_PROJECT }}/${{ matrix.output-path }}" ]; then
+            cp "${{ github.workspace }}/${{ env.CPP_PROJECT }}/${{ matrix.output-path }}" "${{ env.CPP_PREBUILD_DIR }}/libGeoSharPlusCPP${{ matrix.output-ext }}"
+            echo "Copied from ${{ matrix.output-path }}"
+            found=true
+          # Check build/Release subdirectory
+          elif [ -f "${{ github.workspace }}/${{ env.CPP_PROJECT }}/build/Release/libGeoSharPlusCPP.dylib" ]; then
+            cp "${{ github.workspace }}/${{ env.CPP_PROJECT }}/build/Release/libGeoSharPlusCPP.dylib" "${{ env.CPP_PREBUILD_DIR }}/libGeoSharPlusCPP${{ matrix.output-ext }}"
+            echo "Copied from build/Release/"
+            found=true
+          fi
+          
+          if [ "$found" = false ]; then
+            echo "Built library not found at expected locations"
+            echo "Searching for dylib files..."
+            find "${{ github.workspace }}/${{ env.CPP_PROJECT }}/build" -name "*.dylib" -type f 2>/dev/null
+            exit 1
+          fi
+
+      # Report cache status
+      - name: Report Cache Status
+        shell: bash
+        run: |
+          if [ "${{ steps.cache-cpp.outputs.cache-hit }}" = "true" ]; then
+            echo "Using cached C++ build"
+          else
+            echo "Fresh C++ build completed"
+          fi
+
+      # Upload C++ artifacts
+      - name: Upload C++ artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-libs-${{ matrix.os }}
+          path: ${{ env.CPP_PREBUILD_DIR }}
+
+  # ============================================
+  # Build and Test .NET Projects
   # ============================================
   test-dotnet-core:
     name: Test .NET Core (${{ matrix.os }})
@@ -50,16 +233,16 @@ jobs:
       run: |
         echo "Checking for generated FlatBuffer files..."
         if [ -d "generated/GSP_FB/csharp" ]; then
-          echo "? Found generated/GSP_FB/csharp/"
+          echo "Found generated/GSP_FB/csharp/"
           ls -la generated/GSP_FB/csharp/
           file_count=$(ls -1 generated/GSP_FB/csharp/*.cs 2>/dev/null | wc -l)
           echo "Found $file_count generated C# files"
           if [ "$file_count" -lt 1 ]; then
-            echo "? No .cs files found in generated/GSP_FB/csharp/"
+            echo "No .cs files found in generated/GSP_FB/csharp/"
             exit 1
           fi
         else
-          echo "? Missing generated/GSP_FB/csharp/ directory"
+          echo "Missing generated/GSP_FB/csharp/ directory"
           echo "Please run the FlatBuffer compiler locally and commit the generated files."
           exit 1
         fi
@@ -81,14 +264,12 @@ jobs:
         path: '**/TestResults/*.trx'
 
   # ============================================
-  # Build Full .NET Solution (Windows only)
-  # ============================================
-  # This requires RhinoCommon which is only available as reference assemblies.
+  # Build Full .NET Solution with C++ Libraries
   # ============================================
   build-dotnet-full:
     name: Build .NET Solution
     runs-on: windows-latest
-    needs: test-dotnet-core
+    needs: [build-cpp, test-dotnet-core]
 
     steps:
     - name: Checkout repository
@@ -109,126 +290,78 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nuget-
 
+    # Download C++ artifacts
+    - name: Download Windows C++ libs
+      uses: actions/download-artifact@v4
+      with:
+        name: cpp-libs-windows-latest
+        path: ${{ env.CPP_PREBUILD_DIR }}/windows
+
+    - name: Download macOS C++ libs
+      uses: actions/download-artifact@v4
+      with:
+        name: cpp-libs-macos-latest
+        path: ${{ env.CPP_PREBUILD_DIR }}/macos
+
     - name: Restore GeoSharPlusNET
       run: dotnet restore GeoSharPlusNET/GeoSharPlusNET.csproj
 
     - name: Build GeoSharPlusNET (Release)
       run: dotnet build GeoSharPlusNET/GeoSharPlusNET.csproj --configuration Release --no-restore
 
+    # Copy C++ libraries to output directories
+    - name: Copy C++ libraries to output
+      shell: pwsh
+      run: |
+        Write-Host "Copying C++ libraries to output directories..." -ForegroundColor Cyan
+        
+        # Find all target framework directories in bin/Release/
+        $binReleasePath = "${{ github.workspace }}/bin/Release"
+        if (Test-Path $binReleasePath) {
+          $targetDirs = Get-ChildItem -Path $binReleasePath -Directory
+          
+          foreach ($targetDir in $targetDirs) {
+            Write-Host "Target: $($targetDir.Name)" -ForegroundColor Yellow
+            
+            # Copy Windows DLL
+            $windowsDll = "${{ env.CPP_PREBUILD_DIR }}/windows/GeoSharPlusCPP.dll"
+            if (Test-Path $windowsDll) {
+              Copy-Item -Path $windowsDll -Destination $targetDir.FullName -Force
+              Write-Host "  Copied GeoSharPlusCPP.dll" -ForegroundColor Green
+            }
+            
+            # Copy macOS dylib
+            $macosDylib = "${{ env.CPP_PREBUILD_DIR }}/macos/libGeoSharPlusCPP.dylib"
+            if (Test-Path $macosDylib) {
+              Copy-Item -Path $macosDylib -Destination $targetDir.FullName -Force
+              Write-Host "  Copied libGeoSharPlusCPP.dylib" -ForegroundColor Green
+            }
+          }
+        }
+        
+        # Also copy to GeoSharPlusNET output if it exists
+        $netOutputPath = "GeoSharPlusNET/bin/Release"
+        if (Test-Path $netOutputPath) {
+          $targetDirs = Get-ChildItem -Path $netOutputPath -Directory
+          foreach ($targetDir in $targetDirs) {
+            $windowsDll = "${{ env.CPP_PREBUILD_DIR }}/windows/GeoSharPlusCPP.dll"
+            if (Test-Path $windowsDll) {
+              Copy-Item -Path $windowsDll -Destination $targetDir.FullName -Force
+            }
+            $macosDylib = "${{ env.CPP_PREBUILD_DIR }}/macos/libGeoSharPlusCPP.dylib"
+            if (Test-Path $macosDylib) {
+              Copy-Item -Path $macosDylib -Destination $targetDir.FullName -Force
+            }
+          }
+        }
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: GeoSharPlusNET-build
-        path: GeoSharPlusNET/bin/Release/
-
-  # ============================================
-  # Build C++ Library (Windows)
-  # ============================================
-  # This job builds the native C++ library using CMake and vcpkg.
-  # Note: This may fail if specific VS toolset versions are required.
-  # ============================================
-  build-cpp-windows:
-    name: Build C++ (Windows)
-    runs-on: windows-latest
-    continue-on-error: true  # Don't fail the whole workflow if C++ build fails
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Setup MSVC
-      uses: ilammy/msvc-dev-cmd@v1
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-
-    - name: Cache vcpkg packages
-      uses: actions/cache@v4
-      with:
         path: |
-          ${{ github.workspace }}/vcpkg/installed
-          ${{ github.workspace }}/GeoSharPlusCPP/build/vcpkg_installed
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('GeoSharPlusCPP/vcpkg.json') }}
-        restore-keys: |
-          ${{ runner.os }}-vcpkg-
-
-    - name: Configure CMake
-      run: |
-        cmake -S GeoSharPlusCPP -B GeoSharPlusCPP/build -G "Visual Studio 17 2022" -A x64 `
-          -DCMAKE_BUILD_TYPE=Release `
-          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-          -DVCPKG_TARGET_TRIPLET=x64-windows
-      env:
-        VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-
-    - name: Build C++
-      run: cmake --build GeoSharPlusCPP/build --config Release
-
-    - name: Upload C++ artifacts
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: cpp-windows-build
-        path: |
-          GeoSharPlusCPP/build/Release/*.dll
-          GeoSharPlusCPP/build/Release/*.lib
-          cppPrebuild/*.dll
-
-  # ============================================
-  # Build C++ Library (macOS)
-  # ============================================
-  build-cpp-macos:
-    name: Build C++ (macOS)
-    runs-on: macos-latest
-    continue-on-error: true  # Don't fail the whole workflow if C++ build fails
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-
-    - name: Cache vcpkg packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/vcpkg/installed
-          ${{ github.workspace }}/GeoSharPlusCPP/build/vcpkg_installed
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('GeoSharPlusCPP/vcpkg.json') }}
-        restore-keys: |
-          ${{ runner.os }}-vcpkg-
-
-    - name: Configure CMake
-      run: |
-        cmake -S GeoSharPlusCPP -B GeoSharPlusCPP/build \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
-          -DVCPKG_TARGET_TRIPLET=x64-osx
-      env:
-        VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-
-    - name: Build C++
-      run: cmake --build GeoSharPlusCPP/build --config Release
-
-    - name: Upload C++ artifacts
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: cpp-macos-build
-        path: |
-          GeoSharPlusCPP/build/*.dylib
-          cppPrebuild/*.dylib
+          GeoSharPlusNET/bin/Release/
+          ${{ env.CPP_PREBUILD_DIR }}/
 
   # ============================================
   # Test Coverage Report
@@ -265,9 +398,6 @@ jobs:
 
   # ============================================
   # Generate FlatBuffer Files (Manual trigger only)
-  # ============================================
-  # This job can regenerate FlatBuffer files if schemas change.
-  # Triggered manually via workflow_dispatch.
   # ============================================
   generate-flatbuffers:
     name: Generate FlatBuffers
