@@ -2,12 +2,10 @@
 
 	<PropertyGroup>
 		<!-- Select the framework(s) you wish to target.
-        Rhino 6: net45
-        Rhino 7: net48
         Rhino 8 Windows: net48, net8.0, net8.0-windows, net8.0-windows10.0.22000.0, etc
         Rhino 8 Mac: net8.0, net8.0-macos, net8.0-macos12.0, etc
     -->
-		<TargetFrameworks>net8.0-windows;net8.0</TargetFrameworks>
+		<TargetFrameworks>net8.0</TargetFrameworks>
 		<EnableDynamicLoading>true</EnableDynamicLoading>
 		<TargetExt>.gha</TargetExt>
 		<NoWarn>NU1701;NETSDK1086</NoWarn>
