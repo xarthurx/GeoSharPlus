@@ -39,7 +39,6 @@ build
 .vs
 GeoBridgeNET/obj
 GeoBridgeDemoGH/obj
-generated
 GeoBridgeNET/bin
 GeoBridgeDemoGH/bin
 bin
