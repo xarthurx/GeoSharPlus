@@ -61,16 +61,39 @@ dotnet test GeoSharPlusNET.Tests/GeoSharPlusNET.Tests.csproj --collect:"XPlat Co
 
 ## CI/CD Integration
 
-These tests run automatically on:
+These tests run automatically via GitHub Actions on:
 - Every push to `main`, `master`, `develop`, or `template-cleanup` branches
 - Every pull request to these branches
 
-Tests run on multiple platforms:
-- Ubuntu (latest)
-- Windows (latest)
-- macOS (latest)
+### CI Jobs
 
-See `.github/workflows/ci.yml` for the full CI configuration.
+| Job | Platforms | Description |
+|-----|-----------|-------------|
+| `test-dotnet-core` | Ubuntu, Windows, macOS | Runs all unit tests |
+| `build-dotnet-full` | Windows | Builds the full .NET solution with RhinoCommon |
+| `build-cpp-windows` | Windows | Builds C++ native library |
+| `build-cpp-macos` | macOS | Builds C++ native library |
+| `coverage` | Ubuntu | Generates test coverage report |
+| `generate-flatbuffers` | Ubuntu | Regenerates FlatBuffer files (manual trigger) |
+
+### Requirements for CI
+
+The CI workflow requires that the generated FlatBuffer files are committed to the repository:
+
+```
+generated/
+??? GSP_FB/
+    ??? cpp/           # C++ generated files
+    ?   ??? *.h
+    ??? csharp/        # C# generated files
+        ??? *_generated.cs
+```
+
+If you modify the FlatBuffer schemas (`GeoSharPlusCPP/schema/*.fbs`), you must:
+1. Regenerate the files locally using CMake or `flatc`
+2. Commit the updated generated files
+
+Or trigger the `generate-flatbuffers` workflow manually and download the artifacts.
 
 ## Adding New Tests
 
@@ -114,3 +137,9 @@ public class MyNewTests {
 The test project does **not** depend on RhinoCommon. It compiles the Core and Geometry files directly, which allows tests to run in CI environments without Rhino installed.
 
 The Rhino adapter (`GSP.Adapters.Rhino`) is not tested in the automated tests because it requires RhinoCommon. These should be tested manually or in a Rhino environment.
+
+## Note on C++ Native Library
+
+The unit tests in this project test only the .NET code (serialization, geometry types, etc.). They do **not** require the C++ native library (`GeoSharPlusCPP.dll`).
+
+The C++ library is built separately in CI and produces artifacts that can be used for integration testing or deployment.
