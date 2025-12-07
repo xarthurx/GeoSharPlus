@@ -1,269 +1,249 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Rhino.Geometry;
+using GSP.Core;
+using GSP.Geometry;
 
-namespace GSPdemoConsole
-{
-  class Program
-  {
-    static void Main(string[] args)
-    {
-      Console.ForegroundColor = ConsoleColor.Cyan;
-      Console.WriteLine("╔══════════════════════════════════════════════════════════╗");
-      Console.WriteLine("║         GeoSharPlusCPP Interoperability Demo             ║");
-      Console.WriteLine("╚══════════════════════════════════════════════════════════╝");
-      Console.ResetColor();
+namespace GSPdemoConsole {
+class Program {
+  // P/Invoke declarations using GSP.Core.Platform constants
+  [DllImport(Platform.WindowsLib,
+             EntryPoint = "example_point3d_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool
+  ExamplePoint3dRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
-      // Testing Functions  
-      TestPoint3dRoundTrip();
-      TestPoint3dArrayRoundTrip();
+  [DllImport(Platform.MacLib,
+             EntryPoint = "example_point3d_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool
+  ExamplePoint3dRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
-      // Wait for user input before closing
-      Console.ForegroundColor = ConsoleColor.Gray;
-      Console.WriteLine("\nPress any key to close the program...");
-      Console.ResetColor();
-      Console.ReadKey();
-    }
+  [DllImport(Platform.WindowsLib,
+             EntryPoint = "example_point3d_array_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool ExamplePoint3dArrayRoundTripWin(byte[] inBuffer,
+                                                             int inSize,
+                                                             out IntPtr outBuffer,
+                                                             out int outSize);
 
-    /// <summary>
-    /// Tests the round-trip conversion of a Point3d through the C++ library
-    /// </summary>
-    static void TestPoint3dRoundTrip()
-    {
-      PrintHeader("Point3d Round-Trip Test");
+  [DllImport(Platform.MacLib,
+             EntryPoint = "example_point3d_array_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool ExamplePoint3dArrayRoundTripMac(byte[] inBuffer,
+                                                             int inSize,
+                                                             out IntPtr outBuffer,
+                                                             out int outSize);
 
-      // Define a test point
-      var pt1 = new Point3d(1, 2, 3);
+  [DllImport(Platform.WindowsLib,
+             EntryPoint = "example_mesh_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool
+  ExampleMeshRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
-      // Display the original point before sending to native code
-      Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine($"Original Point: {FormatPoint(pt1)}");
-      Console.ResetColor();
+  [DllImport(Platform.MacLib,
+             EntryPoint = "example_mesh_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool
+  ExampleMeshRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
-      // ---- C# to C++ ----
-      PrintOperation("--> Sending to C++ library...", ConsoleColor.Yellow);
-
-      // Convert the point to a byte buffer for sending to C++
-      var bufPtr = GSP.Wrapper.ToPointBuffer(pt1);
-
-      // Send the point through the C++ round-trip function
-      GSP.NativeBridge.Point3dRoundTrip(bufPtr, bufPtr.Length, out IntPtr outPtr, out int outSize);
-
-      // ---- C++ to C# ----
-      PrintOperation("<-- Receiving from C++ library...", ConsoleColor.Green);
-
-      // Copy the result from unmanaged memory to a managed byte array
-      var byteArray = new byte[outSize];
-      Marshal.Copy(outPtr, byteArray, 0, (int)outSize);
-      Marshal.FreeCoTaskMem(outPtr); // Free the unmanaged memory
-
-      // Convert the byte buffer back to a Point3d
-      var res = GSP.Wrapper.FromPointBuffer(byteArray);
-
-      Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine($"\nPoint after round-trip: {FormatPoint(res)}");
-      Console.ResetColor();
-
-      // Verify result
-      bool success = pt1.Equals(res);
-      PrintResult("Round-trip successful", success);
-
-      PrintFooter();
-    }
-
-    /// <summary>
-    /// Tests the round-trip conversion of an array of Point3d through the C++ library
-    /// </summary>
-    static void TestPoint3dArrayRoundTrip()
-    {
-      PrintHeader("Point3d Array Round-Trip Test");
-
-      // Define a test array of points
-      var points = new Point3d[]
-      {
-          new Point3d(1, 2, 3),
-          new Point3d(4, 5, 6),
-          new Point3d(7, 8, 9),
-          new Point3d(10, 11, 12)
-      };
-
-      // Display the original points before sending to native code
-      Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine($"Original Points Count: {points.Length}");
-      Console.ResetColor();
-
-      for (int i = 0; i < points.Length; i++)
-      {
-        Console.WriteLine($"  Point[{i}]: {FormatPoint(points[i])}");
-      }
-
-      // ---- C# to C++ ----
-      PrintOperation("--> Sending to C++ library...", ConsoleColor.Yellow);
-
-      // Convert the point array to a byte buffer for sending to C++
-      var bufPtr = GSP.Wrapper.ToPointArrayBuffer(points);
-
-      // Send the point array through the C++ round-trip function
-      var suc = GSP.NativeBridge.Point3dArrayRoundTrip(bufPtr, bufPtr.Length, out IntPtr outPtr, out int outSize);
-
-      // ---- C++ to C# ----
-      PrintOperation("<-- Receiving from C++ library...", ConsoleColor.Green);
-
-      // Copy the result from unmanaged memory to a managed byte array
-      var byteArray = new byte[outSize];
-      Marshal.Copy(outPtr, byteArray, 0, outSize);
-      Marshal.FreeCoTaskMem(outPtr); // Free the unmanaged memory
-
-      // Convert the byte buffer back to a Point3d array
-      var resultPoints = GSP.Wrapper.FromPointArrayBuffer(byteArray);
-
-      Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine($"\nPoints after round-trip (Count: {resultPoints.Length}):");
-      Console.ResetColor();
-
-      for (int i = 0; i < resultPoints.Length; i++)
-      {
-        Console.WriteLine($"  Point[{i}]: {FormatPoint(resultPoints[i])}");
-      }
-
-      // Verify result
-      bool success = true;
-      if (points.Length != resultPoints.Length)
-      {
-        success = false;
-      }
-      else
-      {
-        for (int i = 0; i < points.Length; i++)
-        {
-          if (!points[i].Equals(resultPoints[i]))
-          {
-            success = false;
-            break;
-          }
-        }
-      }
-
-      PrintResult("Round-trip successful", success);
-      PrintFooter();
-    }
-
-    /// <summary>
-    /// Tests the round-trip conversion of a Mesh through the C++ library
-    /// </summary>
-    static void TestMeshRoundTrip()
-    {
-      PrintHeader("Mesh Round-Trip Test");
-
-      // Create a simple test mesh (a cube)
-      var mesh = new Mesh();
-
-      // Add vertices
-      mesh.Vertices.Add(0, 0, 0);  // 0
-      mesh.Vertices.Add(1, 0, 0);  // 1
-      mesh.Vertices.Add(1, 1, 0);  // 2
-      mesh.Vertices.Add(0, 1, 0);  // 3
-      mesh.Vertices.Add(0, 0, 1);  // 4
-      mesh.Vertices.Add(1, 0, 1);  // 5
-      mesh.Vertices.Add(1, 1, 1);  // 6
-      mesh.Vertices.Add(0, 1, 1);  // 7
-
-      // Add faces (6 quad faces for the cube)
-      mesh.Faces.AddFace(0, 1, 2, 3);  // Bottom
-      mesh.Faces.AddFace(4, 7, 6, 5);  // Top
-      mesh.Faces.AddFace(0, 4, 5, 1);  // Front
-      mesh.Faces.AddFace(1, 5, 6, 2);  // Right
-      mesh.Faces.AddFace(2, 6, 7, 3);  // Back
-      mesh.Faces.AddFace(3, 7, 4, 0);  // Left
-
-      mesh.RebuildNormals();
-
-      // Display some info about the original mesh
-      Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine($"Original Mesh: {FormatMesh(mesh)}");
-      Console.ResetColor();
-
-      // ---- C# to C++ ----
-      PrintOperation("--> Sending to C++ library...", ConsoleColor.Yellow);
-
-      // Convert the mesh to a byte buffer for sending to C++
-      var bufPtr = GSP.Wrapper.ToMeshBuffer(mesh);
-
-      // Send the mesh through the C++ round-trip function
-      GSP.NativeBridge.MeshRoundTrip(bufPtr, bufPtr.Length, out IntPtr outPtr, out int outSize);
-
-      // ---- C++ to C# ----
-      PrintOperation("<-- Receiving from C++ library...", ConsoleColor.Green);
-
-      // Copy the result from unmanaged memory to a managed byte array
-      var byteArray = new byte[outSize];
-      Marshal.Copy(outPtr, byteArray, 0, outSize);
-      Marshal.FreeCoTaskMem(outPtr); // Free the unmanaged memory
-
-      // Convert the byte buffer back to a Mesh
-      var resultMesh = GSP.Wrapper.FromMeshBuffer(byteArray);
-
-      Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine($"\nMesh after round-trip: {FormatMesh(resultMesh)}");
-      Console.ResetColor();
-
-      // Verify result - compare vertex and face counts
-      bool success =
-        mesh.Vertices.Count == resultMesh.Vertices.Count &&
-        mesh.Faces.Count == resultMesh.Faces.Count;
-
-      PrintResult("Round-trip successful", success);
-      PrintFooter();
-    }
-
-
-    #region Output Formatting Helpers
-
-    private static void PrintHeader(string title)
-    {
-      Console.WriteLine();
-      Console.ForegroundColor = ConsoleColor.Cyan;
-      Console.WriteLine("╔═" + new string('═', title.Length) + "═╗");
-      Console.WriteLine("║ " + title + " ║");
-      Console.WriteLine("╚═" + new string('═', title.Length) + "═╝");
-      Console.ResetColor();
-      Console.WriteLine();
-    }
-
-    private static void PrintFooter()
-    {
-      Console.ForegroundColor = ConsoleColor.Cyan;
-      Console.WriteLine("\n" + new string('═', 60));
-      Console.ResetColor();
-    }
-
-    private static void PrintOperation(string operation, ConsoleColor color)
-    {
-      Console.ForegroundColor = color;
-      Console.WriteLine("\n" + operation);
-      Console.ResetColor();
-    }
-
-    private static void PrintResult(string message, bool success)
-    {
-      Console.Write("\n" + message + ": ");
-      Console.ForegroundColor = success ? ConsoleColor.Green : ConsoleColor.Red;
-      Console.WriteLine(success);
-      Console.ResetColor();
-    }
-
-    private static string FormatPoint(Point3d point)
-    {
-      return $"({point.X:F2}, {point.Y:F2}, {point.Z:F2})";
-    }
-    /// <summary>
-    /// Helper to format mesh information
-    /// </summary>
-    private static string FormatMesh(Mesh mesh)
-    {
-      return $"Vertices: {mesh.Vertices.Count}, Faces: {mesh.Faces.Count}";
-    }
-
-    #endregion
+  // Cross-platform wrappers
+  private static bool
+  Point3dRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
+    if (Platform.IsWindows)
+      return ExamplePoint3dRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
+    else
+      return ExamplePoint3dRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
   }
+
+  private static bool
+  Point3dArrayRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
+    if (Platform.IsWindows)
+      return ExamplePoint3dArrayRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
+    else
+      return ExamplePoint3dArrayRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
+  }
+
+  private static bool
+  MeshRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
+    if (Platform.IsWindows)
+      return ExampleMeshRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
+    else
+      return ExampleMeshRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
+  }
+
+  static void Main(string[] args) {
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine("╔══════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║         GeoSharPlus Demo - C#/C++ Bridge Examples        ║");
+    Console.WriteLine("║       (Standalone mode - no RhinoCommon dependency)      ║");
+    Console.WriteLine("╚══════════════════════════════════════════════════════════╝");
+    Console.ResetColor();
+
+    Console.WriteLine(
+        $"\nPlatform: {(Platform.IsWindows ? "Windows" : Platform.IsMac ? "macOS" : "Linux")}");
+    Console.WriteLine($"Native Library: {Platform.NativeLibrary}");
+
+    // Test basic interop using GSP.Geometry types
+    TestPoint3dRoundTrip();
+    TestPoint3dArrayRoundTrip();
+    TestMeshRoundTrip();
+
+    // Wait for user input before closing
+    Console.ForegroundColor = ConsoleColor.Gray;
+    Console.WriteLine("\nPress any key to close the program...");
+    Console.ResetColor();
+    Console.ReadKey();
+  }
+
+  /// <summary>
+  /// Tests the round-trip of a Vec3 point using GSP.Core.Serializer
+  /// </summary>
+  static void TestPoint3dRoundTrip() {
+    PrintHeader("Vec3 Round-Trip Test");
+
+    // Create a point using GSP.Geometry.Vec3
+    var point = new Vec3(1.0, 2.0, 3.0);
+    Console.WriteLine($"Original: {point}");
+
+    // Serialize using GSP.Core.Serializer
+    var buffer = Serializer.Serialize(point);
+
+    // Call C++ roundtrip
+    bool success = Point3dRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
+
+    if (success && outPtr != IntPtr.Zero) {
+      // Marshal result using GSP.Core.MarshalHelper
+      var resultBuffer = MarshalHelper.CopyAndFree(outPtr, outSize);
+
+      // Deserialize using GSP.Core.Serializer
+      var result = Serializer.DeserializeVec3(resultBuffer);
+
+      Console.WriteLine($"Result:   {result}");
+      PrintResult("Success", point.ApproximatelyEquals(result));
+    } else {
+      PrintResult("Failed (C++ call)", false);
+    }
+
+    PrintFooter();
+  }
+
+  /// <summary>
+  /// Tests the round-trip of a Vec3 array using GSP.Core.Serializer
+  /// </summary>
+  static void TestPoint3dArrayRoundTrip() {
+    PrintHeader("Vec3 Array Round-Trip Test");
+
+    // Create points using GSP.Geometry.Vec3
+    var points = new Vec3[] { new(1.0, 2.0, 3.0), new(4.0, 5.0, 6.0), new(7.0, 8.0, 9.0) };
+
+    Console.WriteLine($"Original: {points.Length} points");
+    foreach (var pt in points)
+      Console.WriteLine($"  {pt}");
+
+    // Serialize using GSP.Core.Serializer
+    var buffer = Serializer.Serialize(points);
+
+    // Call C++ roundtrip
+    bool success = Point3dArrayRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
+
+    if (success && outPtr != IntPtr.Zero) {
+      // Marshal result using GSP.Core.MarshalHelper
+      var resultBuffer = MarshalHelper.CopyAndFree(outPtr, outSize);
+
+      // Deserialize using GSP.Core.Serializer
+      var result = Serializer.DeserializeVec3Array(resultBuffer);
+
+      Console.WriteLine($"\nResult: {result.Length} points");
+      foreach (var pt in result)
+        Console.WriteLine($"  {pt}");
+
+      // Verify results
+      bool allMatch = points.Length == result.Length;
+      for (int i = 0; i < points.Length && allMatch; i++)
+        allMatch = points[i].ApproximatelyEquals(result[i]);
+
+      PrintResult("Success", allMatch);
+    } else {
+      PrintResult("Failed (C++ call)", false);
+    }
+
+    PrintFooter();
+  }
+
+  /// <summary>
+  /// Tests the round-trip of a Mesh using GSP.Core.Serializer
+  /// </summary>
+  static void TestMeshRoundTrip() {
+    PrintHeader("Mesh Round-Trip Test");
+
+    // Create a simple cube mesh using GSP.Geometry.Mesh
+    var mesh = new Mesh { Vertices = new Vec3[] { new(0, 0, 0),
+                                                        new(1, 0, 0),
+                                                        new(1, 1, 0),
+                                                        new(0, 1, 0),
+                                                        new(0, 0, 1),
+                                                        new(1, 0, 1),
+                                                        new(1, 1, 1),
+                                                        new(0, 1, 1) },
+                                QuadFaces = new(int, int, int, int)[] {
+                                  (0, 1, 2, 3),  // Bottom
+                                  (4, 7, 6, 5),  // Top
+                                  (0, 4, 5, 1),  // Front
+                                  (1, 5, 6, 2),  // Right
+                                  (2, 6, 7, 3),  // Back
+                                  (3, 7, 4, 0)   // Left
+                                } };
+
+    Console.WriteLine($"Original: {mesh}");
+
+    // Serialize using GSP.Core.Serializer
+    var buffer = Serializer.Serialize(mesh);
+
+    // Call C++ roundtrip
+    bool success = MeshRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
+
+    if (success && outPtr != IntPtr.Zero) {
+      // Marshal result using GSP.Core.MarshalHelper
+      var resultBuffer = MarshalHelper.CopyAndFree(outPtr, outSize);
+
+      // Deserialize using GSP.Core.Serializer
+      var result = Serializer.DeserializeMesh(resultBuffer);
+
+      Console.WriteLine($"Result:   {result}");
+
+      bool matchVertices = mesh.VertexCount == result.VertexCount;
+      bool matchFaces = mesh.FaceCount == result.FaceCount;
+
+      PrintResult("Success", matchVertices && matchFaces);
+    } else {
+      PrintResult("Failed (C++ call)", false);
+    }
+
+    PrintFooter();
+  }
+
+#region Output Formatting Helpers
+
+  static void PrintHeader(string title) {
+    Console.WriteLine();
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine($"═══ {title} ═══");
+    Console.ResetColor();
+  }
+
+  static void PrintFooter() {
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.WriteLine(new string('─', 50));
+    Console.ResetColor();
+  }
+
+  static void PrintResult(string message, bool success) {
+    Console.Write($"{message}: ");
+    Console.ForegroundColor = success ? ConsoleColor.Green : ConsoleColor.Red;
+    Console.WriteLine(success ? "✓" : "✗");
+    Console.ResetColor();
+  }
+
+#endregion
+}
 }

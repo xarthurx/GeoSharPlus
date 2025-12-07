@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.21)
 
 set(PROJECT_NAME GeoSharPlusCPP)
 
-# Set the Visual Studio toolset to the latest version
-if(MSVC)
+# Set the Visual Studio toolset to the latest version (optional, for local development)
+# This is only applied when explicitly requested via -DUSE_VS2026_TOOLSET=ON
+if(MSVC AND USE_VS2026_TOOLSET)
     set(CMAKE_GENERATOR_TOOLSET "v145" CACHE STRING "Visual Studio toolset version" FORCE)
     message(STATUS "Using Visual Studio 2026 (Insider) toolset: ${CMAKE_GENERATOR_TOOLSET}")
 endif()
@@ -12,8 +13,10 @@ endif()
 if(DEFINED ENV{VCPKG_ROOT})
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
     message(STATUS "Using vcpkg toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+elseif(DEFINED CMAKE_TOOLCHAIN_FILE)
+    message(STATUS "Using provided toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 else()
-    message(FATAL_ERROR "VCPKG_ROOT environment variable is not defined. Please set it to your vcpkg installation directory.")
+    message(FATAL_ERROR "VCPKG_ROOT environment variable is not defined and no CMAKE_TOOLCHAIN_FILE provided. Please set VCPKG_ROOT to your vcpkg installation directory.")
 endif()
 
 
