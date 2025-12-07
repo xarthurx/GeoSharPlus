@@ -23,7 +23,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" />
+		<!-- Explicitly reference RhinoCommon to resolve version conflict with GeoSharPlusNET -->
+		<PackageReference Include="RhinoCommon" Version="8.21.25188.17001" ExcludeAssets="runtime" />
+		<PackageReference Include="Grasshopper" Version="8.21.25188.17001" ExcludeAssets="runtime" />
 	</ItemGroup>
 
 	<!-- For Windows only builds -->

@@ -1,27 +1,75 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using GSP.Core;
+using GSP.Geometry;
 
 namespace GSPdemoConsole {
 class Program {
-  // P/Invoke declarations for direct C++ calls
-  private const string LibName = @"GeoSharPlusCPP.dll";
-
-  [DllImport(LibName,
+  // P/Invoke declarations using GSP.Core.Platform constants
+  [DllImport(Platform.WindowsLib,
              EntryPoint = "example_point3d_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
   private static extern bool
-  ExamplePoint3dRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
+  ExamplePoint3dRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
-  [DllImport(LibName,
-             EntryPoint = "example_point3d_array_roundtrip",
+  [DllImport(Platform.MacLib,
+             EntryPoint = "example_point3d_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
   private static extern bool
-  ExamplePoint3dArrayRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
+  ExamplePoint3dRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
-  [DllImport(
-      LibName, EntryPoint = "example_mesh_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+  [DllImport(Platform.WindowsLib,
+             EntryPoint = "example_point3d_array_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool ExamplePoint3dArrayRoundTripWin(byte[] inBuffer,
+                                                             int inSize,
+                                                             out IntPtr outBuffer,
+                                                             out int outSize);
+
+  [DllImport(Platform.MacLib,
+             EntryPoint = "example_point3d_array_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool ExamplePoint3dArrayRoundTripMac(byte[] inBuffer,
+                                                             int inSize,
+                                                             out IntPtr outBuffer,
+                                                             out int outSize);
+
+  [DllImport(Platform.WindowsLib,
+             EntryPoint = "example_mesh_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
   private static extern bool
-  ExampleMeshRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
+  ExampleMeshRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
+
+  [DllImport(Platform.MacLib,
+             EntryPoint = "example_mesh_roundtrip",
+             CallingConvention = CallingConvention.Cdecl)]
+  private static extern bool
+  ExampleMeshRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
+
+  // Cross-platform wrappers
+  private static bool
+  Point3dRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
+    if (Platform.IsWindows)
+      return ExamplePoint3dRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
+    else
+      return ExamplePoint3dRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
+  }
+
+  private static bool
+  Point3dArrayRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
+    if (Platform.IsWindows)
+      return ExamplePoint3dArrayRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
+    else
+      return ExamplePoint3dArrayRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
+  }
+
+  private static bool
+  MeshRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
+    if (Platform.IsWindows)
+      return ExampleMeshRoundTripWin(inBuffer, inSize, out outBuffer, out outSize);
+    else
+      return ExampleMeshRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
+  }
 
   static void Main(string[] args) {
     Console.ForegroundColor = ConsoleColor.Cyan;
@@ -31,9 +79,14 @@ class Program {
     Console.WriteLine("╚══════════════════════════════════════════════════════════╝");
     Console.ResetColor();
 
-    // Test basic interop without RhinoCommon
+    Console.WriteLine(
+        $"\nPlatform: {(Platform.IsWindows ? "Windows" : Platform.IsMac ? "macOS" : "Linux")}");
+    Console.WriteLine($"Native Library: {Platform.NativeLibrary}");
+
+    // Test basic interop using GSP.Geometry types
     TestPoint3dRoundTrip();
     TestPoint3dArrayRoundTrip();
+    TestMeshRoundTrip();
 
     // Wait for user input before closing
     Console.ForegroundColor = ConsoleColor.Gray;
@@ -43,47 +96,30 @@ class Program {
   }
 
   /// <summary>
-  /// Tests the round-trip of a Point3d using raw FlatBuffers
+  /// Tests the round-trip of a Vec3 point using GSP.Core.Serializer
   /// </summary>
   static void TestPoint3dRoundTrip() {
-    PrintHeader("Point3d Round-Trip Test (Raw FlatBuffer)");
+    PrintHeader("Vec3 Round-Trip Test");
 
-    // Create a simple point buffer manually using Google.FlatBuffers
-    double x = 1.0, y = 2.0, z = 3.0;
-    Console.WriteLine($"Original: ({x:F2}, {y:F2}, {z:F2})");
+    // Create a point using GSP.Geometry.Vec3
+    var point = new Vec3(1.0, 2.0, 3.0);
+    Console.WriteLine($"Original: {point}");
 
-    // Build the FlatBuffer for a point
-    var builder = new Google.FlatBuffers.FlatBufferBuilder(64);
-    GSP.FB.PointData.StartPointData(builder);
-    var vecOffset = GSP.FB.Vec3.CreateVec3(builder, x, y, z);
-    GSP.FB.PointData.AddPoint(builder, vecOffset);
-    var ptOffset = GSP.FB.PointData.EndPointData(builder);
-    builder.Finish(ptOffset.Value);
-    var buffer = builder.SizedByteArray();
+    // Serialize using GSP.Core.Serializer
+    var buffer = Serializer.Serialize(point);
 
     // Call C++ roundtrip
-    bool success =
-        ExamplePoint3dRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
+    bool success = Point3dRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
 
     if (success && outPtr != IntPtr.Zero) {
-      // Read result
-      var resultBuffer = new byte[outSize];
-      Marshal.Copy(outPtr, resultBuffer, 0, outSize);
-      Marshal.FreeCoTaskMem(outPtr);
+      // Marshal result using GSP.Core.MarshalHelper
+      var resultBuffer = MarshalHelper.CopyAndFree(outPtr, outSize);
 
-      // Parse the result
-      var byteBuffer = new Google.FlatBuffers.ByteBuffer(resultBuffer);
-      var ptData = GSP.FB.PointData.GetRootAsPointData(byteBuffer);
-      var pt = ptData.Point;
+      // Deserialize using GSP.Core.Serializer
+      var result = Serializer.DeserializeVec3(resultBuffer);
 
-      if (pt.HasValue) {
-        Console.WriteLine($"Result:   ({pt.Value.X:F2}, {pt.Value.Y:F2}, {pt.Value.Z:F2})");
-        bool match = Math.Abs(pt.Value.X - x) < 0.001 && Math.Abs(pt.Value.Y - y) < 0.001 &&
-                     Math.Abs(pt.Value.Z - z) < 0.001;
-        PrintResult("Success", match);
-      } else {
-        PrintResult("Failed (null point)", false);
-      }
+      Console.WriteLine($"Result:   {result}");
+      PrintResult("Success", point.ApproximatelyEquals(result));
     } else {
       PrintResult("Failed (C++ call)", false);
     }
@@ -92,60 +128,93 @@ class Program {
   }
 
   /// <summary>
-  /// Tests the round-trip of a Point3d array using raw FlatBuffers
+  /// Tests the round-trip of a Vec3 array using GSP.Core.Serializer
   /// </summary>
   static void TestPoint3dArrayRoundTrip() {
-    PrintHeader("Point3d Array Round-Trip Test (Raw FlatBuffer)");
+    PrintHeader("Vec3 Array Round-Trip Test");
 
-    // Define test points
-    var points =
-        new(double X, double Y, double Z)[] { (1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0) };
+    // Create points using GSP.Geometry.Vec3
+    var points = new Vec3[] { new(1.0, 2.0, 3.0), new(4.0, 5.0, 6.0), new(7.0, 8.0, 9.0) };
 
     Console.WriteLine($"Original: {points.Length} points");
     foreach (var pt in points)
-      Console.WriteLine($"  ({pt.X:F2}, {pt.Y:F2}, {pt.Z:F2})");
+      Console.WriteLine($"  {pt}");
 
-    // Build the FlatBuffer for point array
-    var builder = new Google.FlatBuffers.FlatBufferBuilder(1024);
-    GSP.FB.PointArrayData.StartPointsVector(builder, points.Length);
-    for (int i = points.Length - 1; i >= 0; i--) {
-      GSP.FB.Vec3.CreateVec3(builder, points[i].X, points[i].Y, points[i].Z);
-    }
-    var ptOffset = builder.EndVector();
-    var arrayOffset = GSP.FB.PointArrayData.CreatePointArrayData(builder, ptOffset);
-    builder.Finish(arrayOffset.Value);
-    var buffer = builder.SizedByteArray();
+    // Serialize using GSP.Core.Serializer
+    var buffer = Serializer.Serialize(points);
 
     // Call C++ roundtrip
-    bool success =
-        ExamplePoint3dArrayRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
+    bool success = Point3dArrayRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
 
     if (success && outPtr != IntPtr.Zero) {
-      // Read result
-      var resultBuffer = new byte[outSize];
-      Marshal.Copy(outPtr, resultBuffer, 0, outSize);
-      Marshal.FreeCoTaskMem(outPtr);
+      // Marshal result using GSP.Core.MarshalHelper
+      var resultBuffer = MarshalHelper.CopyAndFree(outPtr, outSize);
 
-      // Parse the result
-      var byteBuffer = new Google.FlatBuffers.ByteBuffer(resultBuffer);
-      var pointArray = GSP.FB.PointArrayData.GetRootAsPointArrayData(byteBuffer);
+      // Deserialize using GSP.Core.Serializer
+      var result = Serializer.DeserializeVec3Array(resultBuffer);
 
-      Console.WriteLine($"\nResult: {pointArray.PointsLength} points");
-      bool allMatch = pointArray.PointsLength == points.Length;
+      Console.WriteLine($"\nResult: {result.Length} points");
+      foreach (var pt in result)
+        Console.WriteLine($"  {pt}");
 
-      for (int i = 0; i < pointArray.PointsLength; i++) {
-        var pt = pointArray.Points(i);
-        if (pt.HasValue) {
-          Console.WriteLine($"  ({pt.Value.X:F2}, {pt.Value.Y:F2}, {pt.Value.Z:F2})");
-          if (i < points.Length) {
-            allMatch &= Math.Abs(pt.Value.X - points[i].X) < 0.001 &&
-                        Math.Abs(pt.Value.Y - points[i].Y) < 0.001 &&
-                        Math.Abs(pt.Value.Z - points[i].Z) < 0.001;
-          }
-        }
-      }
+      // Verify results
+      bool allMatch = points.Length == result.Length;
+      for (int i = 0; i < points.Length && allMatch; i++)
+        allMatch = points[i].ApproximatelyEquals(result[i]);
 
       PrintResult("Success", allMatch);
+    } else {
+      PrintResult("Failed (C++ call)", false);
+    }
+
+    PrintFooter();
+  }
+
+  /// <summary>
+  /// Tests the round-trip of a Mesh using GSP.Core.Serializer
+  /// </summary>
+  static void TestMeshRoundTrip() {
+    PrintHeader("Mesh Round-Trip Test");
+
+    // Create a simple cube mesh using GSP.Geometry.Mesh
+    var mesh = new Mesh { Vertices = new Vec3[] { new(0, 0, 0),
+                                                        new(1, 0, 0),
+                                                        new(1, 1, 0),
+                                                        new(0, 1, 0),
+                                                        new(0, 0, 1),
+                                                        new(1, 0, 1),
+                                                        new(1, 1, 1),
+                                                        new(0, 1, 1) },
+                                QuadFaces = new(int, int, int, int)[] {
+                                  (0, 1, 2, 3),  // Bottom
+                                  (4, 7, 6, 5),  // Top
+                                  (0, 4, 5, 1),  // Front
+                                  (1, 5, 6, 2),  // Right
+                                  (2, 6, 7, 3),  // Back
+                                  (3, 7, 4, 0)   // Left
+                                } };
+
+    Console.WriteLine($"Original: {mesh}");
+
+    // Serialize using GSP.Core.Serializer
+    var buffer = Serializer.Serialize(mesh);
+
+    // Call C++ roundtrip
+    bool success = MeshRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize);
+
+    if (success && outPtr != IntPtr.Zero) {
+      // Marshal result using GSP.Core.MarshalHelper
+      var resultBuffer = MarshalHelper.CopyAndFree(outPtr, outSize);
+
+      // Deserialize using GSP.Core.Serializer
+      var result = Serializer.DeserializeMesh(resultBuffer);
+
+      Console.WriteLine($"Result:   {result}");
+
+      bool matchVertices = mesh.VertexCount == result.VertexCount;
+      bool matchFaces = mesh.FaceCount == result.FaceCount;
+
+      PrintResult("Success", matchVertices && matchFaces);
     } else {
       PrintResult("Failed (C++ call)", false);
     }
