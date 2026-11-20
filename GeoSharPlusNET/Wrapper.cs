@@ -73,7 +73,6 @@ public static class Wrapper {
     var byteBuffer = new ByteBuffer(buffer);
     var pointArray = FB.PointArrayData.GetRootAsPointArrayData(byteBuffer);
 
-    var pts = pointArray.Points;
     // 1. Check if the array is valid
     if (pointArray.PointsLength == 0)
       return Array.Empty<Point3d>();
@@ -90,7 +89,7 @@ public static class Wrapper {
 
   public static Vector3d[] FromVector3dArrayBuffer(byte[] buffer) {
     var vectors = FromPointArrayBuffer(buffer);
-    return vectors.Select(vectors => new Vector3d(vectors)).ToArray();
+    return vectors.Select(v => new Vector3d(v)).ToArray();
   }
 
   public static List<Point3d>

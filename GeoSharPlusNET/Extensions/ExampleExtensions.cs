@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using GSP.Core;
 using Rhino.Geometry;
 
 namespace GSP.Extensions {
@@ -19,6 +20,11 @@ namespace GSP.Extensions {
   /// P/Invoke bridge for example extension functions.
   /// Handles platform-specific DLL loading (Windows/macOS).
   /// </summary>
+  /// <remarks>
+  /// The C++ functions return a 1-byte <c>bool</c>. The default .NET marshalling reads a
+  /// 4-byte Win32 BOOL, so each declaration needs
+  /// <c>[return: MarshalAs(UnmanagedType.I1)]</c>. Without it, a failed call can read as true.
+  /// </remarks>
   public static class ExampleBridge {
     private const string WinLibName = @"GeoSharPlusCPP.dll";
     private const string MacLibName = @"libGeoSharPlusCPP.dylib";
@@ -27,9 +33,11 @@ namespace GSP.Extensions {
     // Point3d Roundtrip
     // --------------------------------
     [DllImport(WinLibName, EntryPoint = "example_point3d_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool ExamplePoint3dRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
     [DllImport(MacLibName, EntryPoint = "example_point3d_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool ExamplePoint3dRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
     public static bool Point3dRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
@@ -43,9 +51,11 @@ namespace GSP.Extensions {
     // Point3d Array Roundtrip
     // --------------------------------
     [DllImport(WinLibName, EntryPoint = "example_point3d_array_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool ExamplePoint3dArrayRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
     [DllImport(MacLibName, EntryPoint = "example_point3d_array_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool ExamplePoint3dArrayRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
     public static bool Point3dArrayRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
@@ -59,9 +69,11 @@ namespace GSP.Extensions {
     // Mesh Roundtrip
     // --------------------------------
     [DllImport(WinLibName, EntryPoint = "example_mesh_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool ExampleMeshRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
     [DllImport(MacLibName, EntryPoint = "example_mesh_roundtrip", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool ExampleMeshRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
     public static bool MeshRoundTrip(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize) {
@@ -86,9 +98,7 @@ namespace GSP.Extensions {
       if (!ExampleBridge.Point3dRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize))
         return null;
 
-      var result = new byte[outSize];
-      Marshal.Copy(outPtr, result, 0, outSize);
-      Marshal.FreeCoTaskMem(outPtr);
+      var result = MarshalHelper.CopyAndFree(outPtr, outSize);
 
       return Wrapper.FromPointBuffer(result);
     }
@@ -101,9 +111,7 @@ namespace GSP.Extensions {
       if (!ExampleBridge.Point3dArrayRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize))
         return null;
 
-      var result = new byte[outSize];
-      Marshal.Copy(outPtr, result, 0, outSize);
-      Marshal.FreeCoTaskMem(outPtr);
+      var result = MarshalHelper.CopyAndFree(outPtr, outSize);
 
       return Wrapper.FromPointArrayBuffer(result);
     }
@@ -116,9 +124,7 @@ namespace GSP.Extensions {
       if (!ExampleBridge.MeshRoundTrip(buffer, buffer.Length, out IntPtr outPtr, out int outSize))
         return null;
 
-      var result = new byte[outSize];
-      Marshal.Copy(outPtr, result, 0, outSize);
-      Marshal.FreeCoTaskMem(outPtr);
+      var result = MarshalHelper.CopyAndFree(outPtr, outSize);
 
       return Wrapper.FromMeshBuffer(result);
     }

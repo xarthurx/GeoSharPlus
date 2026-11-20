@@ -205,6 +205,30 @@ public class SerializerTests {
     Assert.Empty(result.QuadFaces);
   }
 
+  [Fact]
+  public void Serialize_Mesh_MixedMesh_TriangulatesQuads() {
+    // One quad (0, 1, 2, 3) and one triangle (1, 4, 2)
+    var original = new Mesh {
+      Vertices = new Vec3[] {
+        new(0, 0, 0), new(1, 0, 0), new(1, 1, 0), new(0, 1, 0), new(2, 0.5, 0)
+      },
+      TriangleFaces = new (int, int, int)[] { (1, 4, 2) },
+      QuadFaces = new (int, int, int, int)[] { (0, 1, 2, 3) }
+    };
+
+    // A buffer cannot hold both face types, so the serializer triangulates the quad.
+    var buffer = Serializer.Serialize(original);
+    var result = Serializer.DeserializeMesh(buffer);
+
+    Assert.Equal(5, result.VertexCount);
+    Assert.Empty(result.QuadFaces);
+    Assert.Equal(new (int, int, int)[] { (1, 4, 2), (0, 1, 2), (0, 2, 3) }, result.TriangleFaces);
+
+    // The input mesh must not change.
+    Assert.Single(original.TriangleFaces);
+    Assert.Single(original.QuadFaces);
+  }
+
   #endregion
 
   #region Int Array Serialization
