@@ -16,22 +16,20 @@ $ErrorActionPreference = "Stop"
 # Define upstream files to sync
 $UpstreamFiles = @(
     # C++ Core Headers
-    "GeoSharPlusCPP/include/GeoSharPlusCPP/API/BridgeAPI.h",
     "GeoSharPlusCPP/include/GeoSharPlusCPP/Core/Geometry.h",
     "GeoSharPlusCPP/include/GeoSharPlusCPP/Core/Macro.h",
     "GeoSharPlusCPP/include/GeoSharPlusCPP/Core/MathTypes.h",
     "GeoSharPlusCPP/include/GeoSharPlusCPP/Serialization/Serializer.h",
-    
+
     # C++ Core Sources
-    "GeoSharPlusCPP/src/API/BridgeAPI.cpp",
     "GeoSharPlusCPP/src/Core/Geometry.cpp",
     "GeoSharPlusCPP/src/Serialization/Serializer.cpp",
-    
+
     # C++ Build Configuration
     "GeoSharPlusCPP/CMakeLists.txt",
     "GeoSharPlusCPP/CMakePresets.json",
     "GeoSharPlusCPP/vcpkg.json",
-    
+
     # Core Schemas
     "GeoSharPlusCPP/schema/base.fbs",
     "GeoSharPlusCPP/schema/doubleArray.fbs",
@@ -42,12 +40,47 @@ $UpstreamFiles = @(
     "GeoSharPlusCPP/schema/mesh.fbs",
     "GeoSharPlusCPP/schema/point.fbs",
     "GeoSharPlusCPP/schema/pointArray.fbs",
-    
-    # C# Core Files
-    "GeoSharPlusNET/NativeBridge.cs",
+
+    # C# Core
+    "GeoSharPlusNET/Core/MarshalHelper.cs",
+    "GeoSharPlusNET/Core/Platform.cs",
+    "GeoSharPlusNET/Core/Serializer.cs",
+
+    # C# Geometry
+    "GeoSharPlusNET/Geometry/IGeometryAdapter.cs",
+    "GeoSharPlusNET/Geometry/Mesh.cs",
+    "GeoSharPlusNET/Geometry/Vec2.cs",
+    "GeoSharPlusNET/Geometry/Vec3.cs",
+
+    # C# Adapters
+    "GeoSharPlusNET/Adapters/Rhino/RhinoAdapter.cs",
+
+    # C# Top-Level Files
+    "GeoSharPlusNET/RuntimeInit.cs",
     "GeoSharPlusNET/Wrapper.cs",
-    "GeoSharPlusNET/MeshUtils.cs",
-    "GeoSharPlusNET/GeoSharPlusNET.csproj"
+    "GeoSharPlusNET/GeoSharPlusNET.csproj",
+
+    # Generated FlatBuffers Code (C++)
+    "generated/GSP_FB/cpp/base_generated.h",
+    "generated/GSP_FB/cpp/doubleArray_generated.h",
+    "generated/GSP_FB/cpp/doublePairArray_generated.h",
+    "generated/GSP_FB/cpp/intArray_generated.h",
+    "generated/GSP_FB/cpp/intNestedArray_generated.h",
+    "generated/GSP_FB/cpp/intPairArray_generated.h",
+    "generated/GSP_FB/cpp/mesh_generated.h",
+    "generated/GSP_FB/cpp/pointArray_generated.h",
+    "generated/GSP_FB/cpp/point_generated.h",
+
+    # Generated FlatBuffers Code (C#)
+    "generated/GSP_FB/csharp/base_generated.cs",
+    "generated/GSP_FB/csharp/doubleArray_generated.cs",
+    "generated/GSP_FB/csharp/doublePairArray_generated.cs",
+    "generated/GSP_FB/csharp/intArray_generated.cs",
+    "generated/GSP_FB/csharp/intNestedArray_generated.cs",
+    "generated/GSP_FB/csharp/intPairArray_generated.cs",
+    "generated/GSP_FB/csharp/mesh_generated.cs",
+    "generated/GSP_FB/csharp/pointArray_generated.cs",
+    "generated/GSP_FB/csharp/point_generated.cs"
 )
 
 Write-Host "============================================" -ForegroundColor Cyan
@@ -76,7 +109,7 @@ $unchangedFiles = @()
 
 foreach ($file in $UpstreamFiles) {
     # Check if file has changes
-    $diff = git diff main upstream/main -- $file 2>$null
+    $diff = git diff HEAD upstream/main -- $file 2>$null
     
     if ($diff) {
         $changedFiles += $file
@@ -114,7 +147,7 @@ if (-not $Force) {
     foreach ($file in $changedFiles) {
         Write-Host ""
         Write-Host "--- $file ---" -ForegroundColor Yellow
-        git diff main upstream/main -- $file | Select-Object -First 50
+        git diff HEAD upstream/main -- $file | Select-Object -First 50
         Write-Host "..."
     }
     

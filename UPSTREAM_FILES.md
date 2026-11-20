@@ -49,9 +49,58 @@ When you need upstream updates, use:
 
 ## C# Core Files (GeoSharPlusNET)
 
+### Core
+
+- `Core/MarshalHelper.cs` - Memory marshaling helpers
+- `Core/Platform.cs` - OS detection and native library names
+- `Core/Serializer.cs` - FlatBuffers serialization for GSP types
+
+### Geometry
+
+- `Geometry/IGeometryAdapter.cs` - Interface for CAD platform adapters
+- `Geometry/Mesh.cs` - Mesh with vertices and faces
+- `Geometry/Vec2.cs` - 2D point/vector
+- `Geometry/Vec3.cs` - 3D point/vector
+
+### Adapters
+
+- `Adapters/Rhino/RhinoAdapter.cs` - Converts Rhino types to and from GSP types
+
+### Top-Level Files
+
 - `RuntimeInit.cs` - Platform initialization and library loading
 - `Wrapper.cs` - FlatBuffers wrapper utilities
 - `GeoSharPlusNET.csproj` - Project file
+
+---
+
+## Generated FlatBuffers Code (generated/GSP_FB)
+
+The core schemas produce these files. The script syncs them with the schemas.
+
+### C++ (`generated/GSP_FB/cpp/`)
+
+- `base_generated.h`
+- `doubleArray_generated.h`
+- `doublePairArray_generated.h`
+- `intArray_generated.h`
+- `intNestedArray_generated.h`
+- `intPairArray_generated.h`
+- `mesh_generated.h`
+- `pointArray_generated.h`
+- `point_generated.h`
+
+### C# (`generated/GSP_FB/csharp/`)
+
+- `base_generated.cs`
+- `doubleArray_generated.cs`
+- `doublePairArray_generated.cs`
+- `intArray_generated.cs`
+- `intNestedArray_generated.cs`
+- `intPairArray_generated.cs`
+- `mesh_generated.cs`
+- `pointArray_generated.cs`
+- `point_generated.cs`
 
 ---
 

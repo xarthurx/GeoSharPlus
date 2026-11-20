@@ -6,15 +6,15 @@ Unit tests for the GeoSharPlus .NET framework.
 
 ```
 GeoSharPlusNET.Tests/
-??? Core/
-?   ??? SerializerTests.cs      # FlatBuffer serialization tests
-?   ??? PlatformTests.cs        # Platform detection tests
-?   ??? MarshalHelperTests.cs   # Memory marshaling tests
-??? Geometry/
-?   ??? Vec2Tests.cs            # 2D vector tests
-?   ??? Vec3Tests.cs            # 3D vector tests
-?   ??? MeshTests.cs            # Mesh structure tests
-??? GeoSharPlusNET.Tests.csproj
+├── Core/
+│   ├── SerializerTests.cs      # FlatBuffer serialization tests
+│   ├── PlatformTests.cs        # Platform detection tests
+│   └── MarshalHelperTests.cs   # Memory marshaling tests
+├── Geometry/
+│   ├── Vec2Tests.cs            # 2D vector tests
+│   ├── Vec3Tests.cs            # 3D vector tests
+│   └── MeshTests.cs            # Mesh structure tests
+└── GeoSharPlusNET.Tests.csproj
 ```
 
 ## Running Tests
@@ -62,8 +62,9 @@ dotnet test GeoSharPlusNET.Tests/GeoSharPlusNET.Tests.csproj --collect:"XPlat Co
 ## CI/CD Integration
 
 These tests run automatically via GitHub Actions on:
-- Every push to `main`, `master`, `develop`, or `template-cleanup` branches
-- Every pull request to these branches
+- Every push to `main`
+- Every pull request to `main`
+- Manual start (`workflow_dispatch`)
 
 ### CI Jobs
 
@@ -71,8 +72,7 @@ These tests run automatically via GitHub Actions on:
 |-----|-----------|-------------|
 | `test-dotnet-core` | Ubuntu, Windows, macOS | Runs all unit tests |
 | `build-dotnet-full` | Windows | Builds the full .NET solution with RhinoCommon |
-| `build-cpp-windows` | Windows | Builds C++ native library |
-| `build-cpp-macos` | macOS | Builds C++ native library |
+| `build-cpp` | Windows, macOS | Builds the C++ native library with the CMake presets |
 | `coverage` | Ubuntu | Generates test coverage report |
 | `generate-flatbuffers` | Ubuntu | Regenerates FlatBuffer files (manual trigger) |
 
@@ -82,11 +82,11 @@ The CI workflow requires that the generated FlatBuffer files are committed to th
 
 ```
 generated/
-??? GSP_FB/
-    ??? cpp/           # C++ generated files
-    ?   ??? *.h
-    ??? csharp/        # C# generated files
-        ??? *_generated.cs
+└── GSP_FB/
+    ├── cpp/           # C++ generated files
+    │   └── *_generated.h
+    └── csharp/        # C# generated files
+        └── *_generated.cs
 ```
 
 If you modify the FlatBuffer schemas (`GeoSharPlusCPP/schema/*.fbs`), you must:
@@ -94,6 +94,8 @@ If you modify the FlatBuffer schemas (`GeoSharPlusCPP/schema/*.fbs`), you must:
 2. Commit the updated generated files
 
 Or trigger the `generate-flatbuffers` workflow manually and download the artifacts.
+
+The `flatc` version that creates the generated files must be equal to the `Google.FlatBuffers` NuGet version (`25.2.10` in the test project) and to the vcpkg `flatbuffers` version.
 
 ## Adding New Tests
 

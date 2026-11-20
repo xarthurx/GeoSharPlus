@@ -1,6 +1,10 @@
-﻿# GeoSharPlus
+![GeoSharPlus Logo](.github/logo.png)
 
-A C++/C# bridge library template for geometry processing, designed for use with Rhino/Grasshopper plugins.
+<div align="center">
+<h1><b>GeoSharPlus</b></h1>
+</div>
+
+GeoSharPlus is a C++/C# interoperability library for geometry data exchange. It uses [FlatBuffers](https://flatbuffers.dev/) to move geometry between managed (.NET) and native (C++) code on Windows and macOS. Rhino and Grasshopper were the first target. This repository is a **template**: click "Use this template" and add your own C++ functions.
 
 ## 🚀 Quick Start (Using This Template)
 
@@ -14,19 +18,37 @@ Click **"Use this template"** on GitHub to create your own repository.
 git clone https://github.com/YOUR_USERNAME/YOUR_PROJECT.git
 cd YOUR_PROJECT
 
-# Build C++ library (requires vcpkg)
-cd GeoSharPlusCPP
-cmake --preset x64-release
-cmake --build build --config Release
+# Set VCPKG_ROOT to your vcpkg checkout. The CMake presets read it.
+# macOS / Linux shell:
+export VCPKG_ROOT=/path/to/vcpkg
+# Windows PowerShell:
+#   $env:VCPKG_ROOT = "C:\path\to\vcpkg"
 
-# Build C# library
+# Build the C++ library
+cd GeoSharPlusCPP
+
+# macOS
+cmake --preset macos-default
+cmake --build --preset macos-release
+
+# Windows (use a Visual Studio Developer shell, so that Ninja finds the MSVC compiler)
+cmake --preset windows-default
+cmake --build --preset windows-release
+
+# Build the C# library
 cd ../GeoSharPlusNET
 dotnet build
 ```
 
+The `macos-default` preset uses the `arm64-osx` vcpkg triplet (Apple Silicon). The `windows-default` preset uses `x64-windows`. The first configure step downloads and builds the vcpkg dependencies, so it takes some time.
+
 ### 3. Add Your Custom Functions
 
 See the [Extension Guide](#-adding-your-own-functions) below.
+
+### 4. Run the Demos
+
+The demo projects `GSPdemoConsole` and `GSPdemoGH` build and run on Windows and macOS. See [How the Native Library Reaches the Demos](#-how-the-native-library-reaches-the-demos).
 
 ---
 
@@ -35,6 +57,9 @@ See the [Extension Guide](#-adding-your-own-functions) below.
 ```
 GeoSharPlus/
 ├── GeoSharPlusCPP/              # C++ Native Library
+│   ├── CMakeLists.txt           # ⚠️ UPSTREAM - Build configuration
+│   ├── CMakePresets.json        # ⚠️ UPSTREAM - Build presets (windows-*, macos-*)
+│   ├── vcpkg.json               # ⚠️ UPSTREAM - Pinned dependencies
 │   ├── include/GeoSharPlusCPP/
 │   │   ├── Core/                # ⚠️ UPSTREAM - Core types & macros (Macro.h, MathTypes.h, Geometry.h)
 │   │   ├── Serialization/       # ⚠️ UPSTREAM - FlatBuffers serialization (Serializer.h)
@@ -66,8 +91,15 @@ GeoSharPlus/
 │   ├── RuntimeInit.cs           # ⚠️ UPSTREAM - Platform initialization
 │   └── Wrapper.cs               # ⚠️ UPSTREAM - High-level API for Rhino types
 │
+├── GeoSharPlusNET.Tests/        # xUnit tests for Core and Geometry (no Rhino needed)
+├── generated/                   # ⚠️ UPSTREAM - Generated FlatBuffers code (tracked)
+│   └── GSP_FB/
+│       ├── cpp/                 # *_generated.h
+│       └── csharp/              # *_generated.cs
+├── cppPrebuild/                 # Build output: native library (created by CMake, not tracked)
 ├── GSPdemoGH/                   # Example Grasshopper Plugin
 ├── GSPdemoConsole/              # Example Console App
+├── GSP.DEMO.sln                 # Solution for the demos
 ├── scripts/
 │   └── sync-upstream.ps1        # Update from template
 └── UPSTREAM_FILES.md            # List of upstream files
@@ -184,11 +216,13 @@ public static class MyFunctionsBridge {
 
   [DllImport(WinLibName, EntryPoint = "my_compute_something",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool MyComputeSomethingWin(
       byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
   [DllImport(MacLibName, EntryPoint = "my_compute_something",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool MyComputeSomethingMac(
       byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
@@ -203,6 +237,8 @@ public static class MyFunctionsBridge {
 
 }
 ```
+
+> ⚠️ A C++ `bool` has 1 byte. The default .NET marshalling reads a 4-byte Win32 `BOOL`. Add `[return: MarshalAs(UnmanagedType.I1)]` to every `DllImport` that returns `bool`.
 
 ### Step 4: Create High-Level Wrapper (Optional)
 
@@ -252,14 +288,30 @@ public static class MyFunctionsUtils {
 ### Step 5: Rebuild
 
 ```bash
-# Rebuild C++
+# Rebuild C++ (use windows-release on Windows)
 cd GeoSharPlusCPP
-cmake --build build --config Release
+cmake --build --preset macos-release
 
 # Rebuild C#
 cd ../GeoSharPlusNET
 dotnet build
 ```
+
+If you add a new C++ source file, run the configure preset again (`cmake --preset macos-default` or `cmake --preset windows-default`) before you build.
+
+---
+
+## 🧩 How the Native Library Reaches the Demos
+
+The demo projects do not call PowerShell scripts. MSBuild targets in the `.csproj` files copy the native library to the build output.
+
+1. The CMake post-build step writes the native library into `cppPrebuild/` at the repository root: `GeoSharPlusCPP.dll` on Windows and `libGeoSharPlusCPP.dylib` on macOS.
+2. The MSBuild targets in `GSPdemoGH` and `GSPdemoConsole` copy that file from `cppPrebuild/` to the output folder of the demo.
+3. The demos run on Windows and macOS.
+
+Build the C++ library first. If `cppPrebuild/` is empty, the demo build has no native library to copy.
+
+If you use the project in your own solution, copy the same MSBuild targets from the demo `.csproj` files.
 
 ---
 
@@ -275,7 +327,7 @@ git remote add upstream https://github.com/xarthurx/GeoSharPlus.git
 .\scripts\sync-upstream.ps1
 ```
 
-This will update all **upstream files** while preserving your **Extensions** folders.
+This updates all **upstream files** that are listed in [UPSTREAM_FILES.md](UPSTREAM_FILES.md). It does not change your **Extensions** folders. The script compares your current `HEAD` with `upstream/main`.
 
 ---
 
@@ -319,19 +371,31 @@ We welcome contributions for adapters to other CAD platforms!
 
 ## 📋 Prerequisites
 
-- **CMake** 3.31+
-- **vcpkg** with `VCPKG_ROOT` environment variable set
-- **Visual Studio 2022** (Windows) or Clang (macOS)
+- **CMake** 3.21+
+- **Ninja** (the CMake presets use it)
+- **vcpkg** with the `VCPKG_ROOT` environment variable set
+- **Visual Studio 2022** or later with the C++ workload (Windows), or Xcode command line tools / Clang (macOS)
 - **.NET 8.0 SDK**
-- **Rhino 8** (for Grasshopper development)
+- **Rhino 8** (only for Grasshopper development)
 
 ### vcpkg Dependencies
 
-Automatically installed via `vcpkg.json`:
+vcpkg installs these packages from `GeoSharPlusCPP/vcpkg.json`. The `builtin-baseline` pins all ports to vcpkg release 2026.10.16:
 
-- Eigen3
-- libigl
-- FlatBuffers
+| Package     | Version |
+|-------------|---------|
+| Eigen3      | 5.0.1   |
+| libigl      | 2.6.0   |
+| FlatBuffers | 25.2.10 |
+
+> ⚠️ **FlatBuffers version rule:** the vcpkg `flatbuffers` version and the `Google.FlatBuffers` NuGet version must be equal. The `flatc` compiler writes a version check into the generated C++ and C# code, so a different version breaks the build. An `overrides` entry in `vcpkg.json` holds FlatBuffers at 25.2.10, because 25.2.10 is the newest `Google.FlatBuffers` NuGet version. If you change one version, change the other.
+
+---
+
+## Used By
+
+- [BeingAliveLanguage](https://beingalivelanguage.arch.ethz.ch) - A Grasshopper plugin to create computational diagrams for living systems
+- [IG-Mesh](https://github.com/xarthurx/IG-Mesh) - A one-stop solution for mesh processing in Grasshopper (for Rhino)
 
 ---
 
