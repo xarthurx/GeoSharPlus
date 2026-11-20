@@ -12,7 +12,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
-    <PackageReference Include="xunit.v3" Version="4.0.3" />
+    <!--
+      xunit.v3.mtp-off is xunit.v3 without Microsoft Testing Platform (MTP).
+      With MTP, "dotnet test" in VSTest mode stops with an error on .NET SDK 10 and later.
+      This package runs the tests through VSTest on SDK 8, 9 and 10.
+    -->
+    <PackageReference Include="xunit.v3.mtp-off" Version="4.0.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
