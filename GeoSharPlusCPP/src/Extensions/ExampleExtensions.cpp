@@ -46,9 +46,11 @@ GSP_API bool GSP_CALL example_point3d_roundtrip(const uint8_t* inBuffer,
   //   pt.x() += 1.0;  // Translate X by 1
   //   pt = pt * 2.0;  // Scale by 2
 
-  // Step 3: Serialize the result
+  // Step 3: Serialize the result.
+  // If the serializer fails, it returns no buffer, so there is nothing to free.
+  // Never use delete[] on an interop buffer: the serializer allocates it with
+  // CoTaskMemAlloc (Windows) or malloc (macOS/Linux).
   if (!GS::serializePoint(pt, *outBuffer, *outSize)) {
-    if (*outBuffer) delete[] *outBuffer;
     *outBuffer = nullptr;
     *outSize = 0;
     return false;
@@ -78,9 +80,11 @@ GSP_API bool GSP_CALL example_point3d_array_roundtrip(const uint8_t* inBuffer,
   //     pt.z() += 10.0;  // Move all points up by 10
   //   }
 
-  // Step 3: Serialize the result
+  // Step 3: Serialize the result.
+  // If the serializer fails, it returns no buffer, so there is nothing to free.
+  // Never use delete[] on an interop buffer: the serializer allocates it with
+  // CoTaskMemAlloc (Windows) or malloc (macOS/Linux).
   if (!GS::serializePointArray(points, *outBuffer, *outSize)) {
-    if (*outBuffer) delete[] *outBuffer;
     *outBuffer = nullptr;
     *outSize = 0;
     return false;
@@ -114,9 +118,11 @@ GSP_API bool GSP_CALL example_mesh_roundtrip(const uint8_t* inBuffer,
   //   mesh.V.col(2) *= 2.0;  // Scale Z coordinates by 2
   //   mesh.V.rowwise() += Eigen::RowVector3d(1, 0, 0);  // Translate
 
-  // Step 3: Serialize the result
+  // Step 3: Serialize the result.
+  // If the serializer fails, it returns no buffer, so there is nothing to free.
+  // Never use delete[] on an interop buffer: the serializer allocates it with
+  // CoTaskMemAlloc (Windows) or malloc (macOS/Linux).
   if (!GS::serializeMesh(mesh, *outBuffer, *outSize)) {
-    if (*outBuffer) delete[] *outBuffer;
     *outBuffer = nullptr;
     *outSize = 0;
     return false;

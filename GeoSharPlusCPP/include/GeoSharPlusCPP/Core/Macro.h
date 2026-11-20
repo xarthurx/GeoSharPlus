@@ -6,7 +6,8 @@
   #else
     #define GSP_API __declspec(dllimport)
   #endif
-  #define GSP_CALL __stdcall
+  // Must agree with CallingConvention.Cdecl in the C# [DllImport] declarations.
+  #define GSP_CALL __cdecl
 #else
   #define GSP_API __attribute__((visibility("default")))
   #define GSP_CALL
