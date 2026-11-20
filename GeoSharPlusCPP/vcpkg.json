@@ -1,9 +1,21 @@
 {
   "name": "geosharplus",
   "version": "0.1.0",
+  "$comment": [
+    "builtin-baseline pins every port to vcpkg release 2026.10.16, so local and CI builds use the same versions.",
+    "The flatbuffers override must be equal to the Google.FlatBuffers NuGet version in the .csproj files.",
+    "flatc writes a version check into the generated code. A different version breaks the C++ or the C# build."
+  ],
+  "builtin-baseline": "9eec002df1cd109f8f104cd966a763daf9751489",
   "dependencies": [
     "eigen3",
     "flatbuffers",
     "libigl"
+  ],
+  "overrides": [
+    {
+      "name": "flatbuffers",
+      "version": "25.2.10"
+    }
   ]
 }
