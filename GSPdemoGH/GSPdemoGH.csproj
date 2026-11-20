@@ -39,17 +39,35 @@
 		<!-- Rhino 8.10 and earlier -->
 		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" ExcludeAssets="all" GeneratePathProperty="true" />
 		<Reference Include="$(PkgMicrosoft_NETFramework_ReferenceAssemblies_net48)\build\.NETFramework\v4.8\System.Windows.Forms.dll" Private="False" />
-		<PackageReference Include="System.Drawing.Common" Version="8.0.0" ExcludeAssets="runtime" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.34" ExcludeAssets="runtime" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\GeoSharPlusNET\GeoSharPlusNET.csproj" />
 	</ItemGroup>
 
-	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-	  <Exec Command="powershell -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; '$(MSBuildThisFileDirectory)prebuild.ps1' -TargetDir '$(TargetDir)' -SolutionDir '$(SolutionDir)'&quot;" /> 
+	<!--
+		Copy the native C++ library from <repo>/cppPrebuild to the build output.
+		CMake writes the library to cppPrebuild after each C++ build.
+		The target uses MSBuild tasks only, so it runs on Windows and macOS without PowerShell.
+		It does not use $(SolutionDir), which is undefined when you build this project without the .sln.
+	-->
+	<PropertyGroup>
+		<GspCppPrebuildDir>$(MSBuildThisFileDirectory)../cppPrebuild/</GspCppPrebuildDir>
+	</PropertyGroup>
+	<Target Name="GspCopyNativeLibrary" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
+		<ItemGroup>
+			<GspNativeLibrary Include="$(GspCppPrebuildDir)*.dll;$(GspCppPrebuildDir)*.dylib;$(GspCppPrebuildDir)*.so" />
+		</ItemGroup>
+		<Warning Condition="'@(GspNativeLibrary)' == ''" Text="No native library found in $(GspCppPrebuildDir). Build GeoSharPlusCPP with CMake first." />
+		<Copy SourceFiles="@(GspNativeLibrary)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
 	</Target>
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-	  <Exec Command="powershell -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; '$(MSBuildThisFileDirectory)postbuild.ps1' -TargetDir '$(TargetDir)' -SolutionDir '$(SolutionDir)'&quot;" />
+
+	<!-- Collect the plugin and its libraries in <repo>/bin/<target framework>/ -->
+	<Target Name="GspCopyToRepoBin" AfterTargets="GspCopyNativeLibrary" Condition="'$(TargetFramework)' != ''">
+		<ItemGroup>
+			<GspPluginFile Include="$(TargetDir)*.gha;$(TargetDir)*.dll;$(TargetDir)*.dylib;$(TargetDir)*.so" />
+		</ItemGroup>
+		<Copy SourceFiles="@(GspPluginFile)" DestinationFolder="$(MSBuildThisFileDirectory)../bin/$(TargetFramework)/" SkipUnchangedFiles="true" />
 	</Target>
 
 </Project>
