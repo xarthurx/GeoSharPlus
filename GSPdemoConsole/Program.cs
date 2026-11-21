@@ -9,18 +9,21 @@ class Program {
   [DllImport(Platform.WindowsLib,
              EntryPoint = "example_point3d_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool
   ExamplePoint3dRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
   [DllImport(Platform.MacLib,
              EntryPoint = "example_point3d_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool
   ExamplePoint3dRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
   [DllImport(Platform.WindowsLib,
              EntryPoint = "example_point3d_array_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool ExamplePoint3dArrayRoundTripWin(byte[] inBuffer,
                                                              int inSize,
                                                              out IntPtr outBuffer,
@@ -29,6 +32,7 @@ class Program {
   [DllImport(Platform.MacLib,
              EntryPoint = "example_point3d_array_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool ExamplePoint3dArrayRoundTripMac(byte[] inBuffer,
                                                              int inSize,
                                                              out IntPtr outBuffer,
@@ -37,12 +41,14 @@ class Program {
   [DllImport(Platform.WindowsLib,
              EntryPoint = "example_mesh_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool
   ExampleMeshRoundTripWin(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
   [DllImport(Platform.MacLib,
              EntryPoint = "example_mesh_roundtrip",
              CallingConvention = CallingConvention.Cdecl)]
+  [return: MarshalAs(UnmanagedType.I1)]
   private static extern bool
   ExampleMeshRoundTripMac(byte[] inBuffer, int inSize, out IntPtr outBuffer, out int outSize);
 
@@ -71,7 +77,10 @@ class Program {
       return ExampleMeshRoundTripMac(inBuffer, inSize, out outBuffer, out outSize);
   }
 
-  static void Main(string[] args) {
+  // Number of failed checks. Main returns it as the process exit code.
+  private static int _failures = 0;
+
+  static int Main(string[] args) {
     Console.ForegroundColor = ConsoleColor.Cyan;
     Console.WriteLine("╔══════════════════════════════════════════════════════════╗");
     Console.WriteLine("║         GeoSharPlus Demo - C#/C++ Bridge Examples        ║");
@@ -88,11 +97,16 @@ class Program {
     TestPoint3dArrayRoundTrip();
     TestMeshRoundTrip();
 
-    // Wait for user input before closing
-    Console.ForegroundColor = ConsoleColor.Gray;
-    Console.WriteLine("\nPress any key to close the program...");
-    Console.ResetColor();
-    Console.ReadKey();
+    // Wait for user input before closing. Skip this when there is no console
+    // (CI, or redirected input), because ReadKey throws an exception there.
+    if (!Console.IsInputRedirected) {
+      Console.ForegroundColor = ConsoleColor.Gray;
+      Console.WriteLine("\nPress any key to close the program...");
+      Console.ResetColor();
+      Console.ReadKey();
+    }
+
+    return _failures;
   }
 
   /// <summary>
@@ -212,7 +226,10 @@ class Program {
       Console.WriteLine($"Result:   {result}");
 
       bool matchVertices = mesh.VertexCount == result.VertexCount;
-      bool matchFaces = mesh.FaceCount == result.FaceCount;
+      for (int i = 0; i < mesh.VertexCount && matchVertices; i++)
+        matchVertices = mesh.Vertices[i].ApproximatelyEquals(result.Vertices[i]);
+      bool matchFaces = mesh.QuadFaces.SequenceEqual(result.QuadFaces) &&
+                        mesh.TriangleFaces.SequenceEqual(result.TriangleFaces);
 
       PrintResult("Success", matchVertices && matchFaces);
     } else {
@@ -238,6 +255,9 @@ class Program {
   }
 
   static void PrintResult(string message, bool success) {
+    if (!success)
+      _failures++;
+
     Console.Write($"{message}: ");
     Console.ForegroundColor = success ? ConsoleColor.Green : ConsoleColor.Red;
     Console.WriteLine(success ? "✓" : "✗");

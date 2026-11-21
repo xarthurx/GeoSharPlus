@@ -7,12 +7,25 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="powershell -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; '$(MSBuildThisFileDirectory)prebuild.ps1' -TargetDir '$(TargetDir)' -SolutionDir '$(SolutionDir)'&quot;" />
-  </Target>
-
   <ItemGroup>
     <ProjectReference Include="..\GeoSharPlusNET\GeoSharPlusNET.csproj" />
   </ItemGroup>
+
+  <!--
+    Copy the native C++ library from <repo>/cppPrebuild to the build output.
+    CMake writes the library to cppPrebuild after each C++ build.
+    The target uses MSBuild tasks only, so it runs on Windows and macOS without PowerShell.
+    It does not use $(SolutionDir), which is undefined when you build this project without the .sln.
+  -->
+  <PropertyGroup>
+    <GspCppPrebuildDir>$(MSBuildThisFileDirectory)../cppPrebuild/</GspCppPrebuildDir>
+  </PropertyGroup>
+  <Target Name="GspCopyNativeLibrary" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
+    <ItemGroup>
+      <GspNativeLibrary Include="$(GspCppPrebuildDir)*.dll;$(GspCppPrebuildDir)*.dylib;$(GspCppPrebuildDir)*.so" />
+    </ItemGroup>
+    <Warning Condition="'@(GspNativeLibrary)' == ''" Text="No native library found in $(GspCppPrebuildDir). Build GeoSharPlusCPP with CMake first." />
+    <Copy SourceFiles="@(GspNativeLibrary)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

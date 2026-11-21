@@ -46,3 +46,9 @@ GeoSharPlusNET/obj
 GSPdemoGH/obj
 GSPdemoConsole/obj
 GeoSharPlusNET.Tests/obj
+
+# Build outputs and test results
+cppPrebuild/
+coverage/
+TestResults/
+*.trx

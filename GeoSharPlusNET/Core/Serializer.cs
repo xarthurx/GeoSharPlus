@@ -106,12 +106,19 @@ namespace GSP.Core {
     /// </summary>
     /// <param name="mesh">The mesh to serialize.</param>
     /// <param name="triangulate">If true, converts quads to triangles before serializing.</param>
+    /// <remarks>
+    /// A buffer holds triangles or quads, not both, because the C++ mesh stores all faces in
+    /// one matrix with a fixed column count. A mesh with both face types is always
+    /// triangulated. The input mesh does not change.
+    /// </remarks>
     public static byte[] Serialize(Geometry.Mesh mesh, bool triangulate = false) {
       var builder = new FlatBufferBuilder(1024);
 
-      // Optionally triangulate
+      // Triangulate if the caller asks for it, or if the mesh has both face types.
+      // Without this, the quad faces of a mixed mesh would be lost.
       var workingMesh = mesh;
-      if (triangulate && mesh.HasQuads) {
+      bool isMixed = mesh.HasQuads && mesh.HasTriangles;
+      if (mesh.HasQuads && (triangulate || isMixed)) {
         workingMesh = mesh.Clone();
         workingMesh.Triangulate();
       }
@@ -136,7 +143,7 @@ namespace GSP.Core {
         }
         quadFacesOffset = builder.EndVector();
       } else {
-        // Triangle mesh (or mixed, triangulated)
+        // Triangle mesh (a mixed mesh is triangulated above)
         FB.MeshData.StartFacesVector(builder, workingMesh.TriangleFaces.Length);
         for (int i = workingMesh.TriangleFaces.Length - 1; i >= 0; i--) {
           var f = workingMesh.TriangleFaces[i];

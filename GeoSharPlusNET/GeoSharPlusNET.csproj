@@ -8,7 +8,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.FlatBuffers" Version="25.2.10" />
-		<PackageReference Include="KdTree" Version="1.4.1" />
 		<PackageReference Include="RhinoCommon" Version="8.21.25188.17001" />
 	</ItemGroup>
 
@@ -19,7 +18,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\GeoSharPlusCPP\build\GeoSharPlusCPP.vcxproj" />
+	  <!-- CMake writes this project only with a Visual Studio generator. The Ninja presets do not. -->
+	  <ProjectReference Include="..\GeoSharPlusCPP\build\GeoSharPlusCPP.vcxproj" Condition="Exists('..\GeoSharPlusCPP\build\GeoSharPlusCPP.vcxproj')" />
 	</ItemGroup>
 
 </Project>

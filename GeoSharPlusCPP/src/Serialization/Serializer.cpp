@@ -45,6 +45,13 @@ inline void FreeInteropMemory(void* ptr) {
 #endif
 }
 
+// Returns true if the input buffer can be given to the FlatBuffers verifier.
+// A null pointer or a size that is not positive makes the verifier read
+// outside the buffer.
+inline bool IsValidInput(const uint8_t* data, int size) {
+  return data != nullptr && size > 0;
+}
+
 // Helper template to get the element type of a container
 template <typename Container>
 struct element_type {
@@ -138,6 +145,10 @@ bool serializeNumberArray(const NumberContainer& numbers, uint8_t*& resBuffer, i
 // Unified number array deserialization - detects container and element types
 template <typename NumberContainer>
 bool deserializeNumberArray(const uint8_t* data, int size, NumberContainer& numberArray) {
+  if (!IsValidInput(data, size)) {
+    return false;
+  }
+
   // Extract value type from container
   using ValueType = typename element_type<NumberContainer>::type;
 
@@ -264,6 +275,10 @@ bool serializeNumberPairArray(const PairContainer& pairs, uint8_t*& resBuffer, i
 // Unified number pair array deserialization
 template <typename PairContainer>
 bool deserializeNumberPairArray(const uint8_t* data, int size, PairContainer& pairArray) {
+  if (!IsValidInput(data, size)) {
+    return false;
+  }
+
   // Extract element type from container
   using ElementType = typename pair_element_type<PairContainer>::type;
 
@@ -361,13 +376,18 @@ bool serializePoint(const Vector3d& point, uint8_t*& resBuffer, int& resSize) {
 }
 
 bool deserializePoint(const uint8_t* buffer, int size, Vector3d& point) {
+  if (!IsValidInput(buffer, size)) {
+    return false;
+  }
+
   flatbuffers::Verifier verifier(buffer, size);
   if (!verifier.VerifyBuffer<GSP::FB::PointData>()) {
     return false;
   }
 
   auto ptData = GSP::FB::GetPointData(buffer);
-  if (!ptData) {
+  // The point field is optional in the schema, so it can be absent.
+  if (!ptData || !ptData->point()) {
     return false;
   }
 
@@ -413,6 +433,10 @@ bool serializePointArray(const PointContainer& points, uint8_t*& resBuffer, int&
 // Template function to handle both vector<Vector3d> and MatrixXd output types
 template <typename PointContainer>
 bool deserializePointArray(const uint8_t* data, int size, PointContainer& pointArray) {
+  if (!IsValidInput(data, size)) {
+    return false;
+  }
+
   // Verify the buffer integrity
   flatbuffers::Verifier verifier(data, size);
   if (!verifier.VerifyBuffer<GSP::FB::PointArrayData>()) {
@@ -421,7 +445,8 @@ bool deserializePointArray(const uint8_t* data, int size, PointContainer& pointA
 
   // Get the vector from the buffer
   auto ptArrayData = GSP::FB::GetPointArrayData(data);
-  if (!ptArrayData) {
+  // The points vector is optional in the schema, so it can be absent.
+  if (!ptArrayData || !ptArrayData->points()) {
     return false;
   }
 
@@ -457,13 +482,13 @@ bool serializeMesh(const Mesh& mesh, uint8_t*& resBuffer, int& resSize) {
   // Convert vertices to flatbuffers compatible format
   std::vector<GSP::FB::Vec3> vertices;
   vertices.reserve(mesh.V.rows());
-  for (size_t i = 0; i < mesh.V.rows(); i++) {
+  for (Eigen::Index i = 0; i < mesh.V.rows(); i++) {
     vertices.emplace_back(mesh.V(i, 0), mesh.V(i, 1), mesh.V(i, 2));
   }
 
   // Determine if this is a triangle or quad mesh
-  int faceCols = mesh.F.cols();
-  
+  const Eigen::Index faceCols = mesh.F.cols();
+
   flatbuffers::Offset<flatbuffers::Vector<const GSP::FB::Vec3i*>> facesVector;
   flatbuffers::Offset<flatbuffers::Vector<const GSP::FB::Vec4i*>> quadFacesVector;
   
@@ -471,7 +496,7 @@ bool serializeMesh(const Mesh& mesh, uint8_t*& resBuffer, int& resSize) {
     // Triangle mesh - use existing Vec3i format
     std::vector<GSP::FB::Vec3i> faces;
     faces.reserve(mesh.F.rows());
-    for (size_t i = 0; i < mesh.F.rows(); i++) {
+    for (Eigen::Index i = 0; i < mesh.F.rows(); i++) {
       faces.emplace_back(mesh.F(i, 0), mesh.F(i, 1), mesh.F(i, 2));
     }
     facesVector = builder.CreateVectorOfStructs(faces);
@@ -479,7 +504,7 @@ bool serializeMesh(const Mesh& mesh, uint8_t*& resBuffer, int& resSize) {
     // Quad mesh - use Vec4i format
     std::vector<GSP::FB::Vec4i> quadFaces;
     quadFaces.reserve(mesh.F.rows());
-    for (size_t i = 0; i < mesh.F.rows(); i++) {
+    for (Eigen::Index i = 0; i < mesh.F.rows(); i++) {
       quadFaces.emplace_back(mesh.F(i, 0), mesh.F(i, 1), mesh.F(i, 2), mesh.F(i, 3));
     }
     quadFacesVector = builder.CreateVectorOfStructs(quadFaces);
@@ -516,6 +541,10 @@ bool serializeMesh(const Mesh& mesh, uint8_t*& resBuffer, int& resSize) {
 }
 
 bool deserializeMesh(const uint8_t* data, int size, Mesh& mesh) {
+  if (!IsValidInput(data, size)) {
+    return false;
+  }
+
   // Verify the buffer integrity
   flatbuffers::Verifier verifier(data, size);
   if (!verifier.VerifyBuffer<GSP::FB::MeshData>()) {
@@ -659,6 +688,10 @@ bool serializeNestedIntArray(const std::vector<std::vector<int>>& nestedArray,
 bool deserializeNestedIntArray(const uint8_t* data,
                                int size,
                                std::vector<std::vector<int>>& nestedArray) {
+  if (!IsValidInput(data, size)) {
+    return false;
+  }
+
   // Verify the buffer integrity
   flatbuffers::Verifier verifier(data, size);
   if (!verifier.VerifyBuffer<GSP::FB::IntNestedArrayData>()) {

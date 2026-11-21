@@ -7,10 +7,16 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   DOTNET_VERSION: '8.0.x'
   CPP_PROJECT: GeoSharPlusCPP
   CPP_PREBUILD_DIR: cppPrebuild
+  # Must be equal to the flatbuffers override in GeoSharPlusCPP/vcpkg.json
+  # and to the Google.FlatBuffers NuGet version in the .csproj files.
+  FLATBUFFERS_VERSION: '25.2.10'
 
 jobs:
   # ============================================
@@ -41,58 +47,21 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
-      # Generate cache key based on C++ source files
-      - name: Generate C++ Cache Key (macOS)
-        if: matrix.os == 'macos-latest'
-        id: cpp-cache-key
-        shell: bash
-        run: |
-          cpp_hash=$(find ${{ env.CPP_PROJECT }}/src ${{ env.CPP_PROJECT }}/include -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -exec shasum -a 256 {} \; 2>/dev/null | sort | shasum -a 256 | cut -d' ' -f1)
-          cmake_hash=$(shasum -a 256 ${{ env.CPP_PROJECT }}/CMakeLists.txt ${{ env.CPP_PROJECT }}/CMakePresets.json 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
-          echo "hash=${cpp_hash:0:16}${cmake_hash:0:16}" >> $GITHUB_OUTPUT
-          echo "C++ source hash: ${cpp_hash:0:16}${cmake_hash:0:16}"
-
-      - name: Generate C++ Cache Key (Windows)
-        if: matrix.os == 'windows-latest'
-        id: cpp-cache-key-windows
-        shell: pwsh
-        run: |
-          $files = Get-ChildItem -Path "${{ env.CPP_PROJECT }}" -Recurse -Include *.cpp,*.h,*.hpp,CMakeLists.txt,CMakePresets.json | 
-            Where-Object { $_.FullName -notmatch '[\\/]build[\\/]' } |
-            Sort-Object FullName
-          
-          $hashInput = ""
-          foreach ($file in $files) {
-            $relativePath = $file.FullName.Replace("${{ github.workspace }}\", "").Replace("\", "/")
-            $contentHash = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash
-            $hashInput += "$relativePath`:$contentHash`n"
-          }
-          
-          $stringAsStream = [System.IO.MemoryStream]::new()
-          $writer = [System.IO.StreamWriter]::new($stringAsStream)
-          $writer.write($hashInput)
-          $writer.Flush()
-          $stringAsStream.Position = 0
-          $cpp_hash = (Get-FileHash -InputStream $stringAsStream -Algorithm SHA256).Hash.ToLower().Substring(0, 32)
-          
-          echo "hash=$cpp_hash" >> $env:GITHUB_OUTPUT
-          echo "C++ source hash: $cpp_hash"
-
-      # Try to restore C++ build from cache
+      # Restore the C++ build if no build input changed.
+      # The key covers the sources, the schemas, the build files, the vcpkg manifest
+      # and this workflow file (it holds the vcpkg commit ID).
       - name: Cache C++ Build Artifacts
         id: cache-cpp
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ env.CPP_PROJECT }}/build
             ${{ env.CPP_PREBUILD_DIR }}
-          key: cpp-build-${{ matrix.os }}-${{ matrix.os == 'windows-latest' && steps.cpp-cache-key-windows.outputs.hash || steps.cpp-cache-key.outputs.hash }}
-          restore-keys: |
-            cpp-build-${{ matrix.os }}-
+          key: cpp-build-${{ matrix.os }}-${{ hashFiles('GeoSharPlusCPP/src/**', 'GeoSharPlusCPP/include/**', 'GeoSharPlusCPP/schema/**', 'GeoSharPlusCPP/CMakeLists.txt', 'GeoSharPlusCPP/CMakePresets.json', 'GeoSharPlusCPP/vcpkg.json', '.github/workflows/ci.yml') }}
 
       # Setup CMake (only if cache miss)
       - name: Setup CMake
@@ -104,7 +73,9 @@ jobs:
         if: steps.cache-cpp.outputs.cache-hit != 'true'
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: ce613c41372b23b1f51333815feb3edd87ef8a8b
+          # vcpkg release 2026.10.16. Keep equal to "builtin-baseline" in GeoSharPlusCPP/vcpkg.json.
+          vcpkgGitCommitId: 9eec002df1cd109f8f104cd966a763daf9751489
+          vcpkgJsonGlob: 'GeoSharPlusCPP/vcpkg.json'
 
       # Configure and build using CMake presets (only if cache miss)
       - name: Configure and Build with CMake
@@ -193,10 +164,22 @@ jobs:
 
       # Upload C++ artifacts
       - name: Upload C++ artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpp-libs-${{ matrix.os }}
           path: ${{ env.CPP_PREBUILD_DIR }}
+
+      # Run the console demo against the native library from this job.
+      # The demo sends a point, a point array and a mesh through C++ and back.
+      # It returns a non-zero exit code if a result is wrong.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Native round-trip test
+        shell: bash
+        run: dotnet run --project GSPdemoConsole/GSPdemoConsoleCS.csproj --configuration Release < /dev/null
 
   # ============================================
   # Build and Test .NET Projects
@@ -211,17 +194,17 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: recursive
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -257,7 +240,7 @@ jobs:
       run: dotnet test GeoSharPlusNET.Tests/GeoSharPlusNET.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: test-results-${{ matrix.os }}
@@ -273,94 +256,57 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: recursive
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
-    # Download C++ artifacts
-    - name: Download Windows C++ libs
-      uses: actions/download-artifact@v4
+    # Put both native libraries in cppPrebuild/, where the demo projects expect them
+    - name: Download C++ libs (Windows and macOS)
+      uses: actions/download-artifact@v8
       with:
-        name: cpp-libs-windows-latest
-        path: ${{ env.CPP_PREBUILD_DIR }}/windows
-
-    - name: Download macOS C++ libs
-      uses: actions/download-artifact@v4
-      with:
-        name: cpp-libs-macos-latest
-        path: ${{ env.CPP_PREBUILD_DIR }}/macos
-
-    - name: Restore GeoSharPlusNET
-      run: dotnet restore GeoSharPlusNET/GeoSharPlusNET.csproj
+        pattern: cpp-libs-*
+        path: ${{ env.CPP_PREBUILD_DIR }}
+        merge-multiple: true
 
     - name: Build GeoSharPlusNET (Release)
-      run: dotnet build GeoSharPlusNET/GeoSharPlusNET.csproj --configuration Release --no-restore
+      run: dotnet build GeoSharPlusNET/GeoSharPlusNET.csproj --configuration Release
 
-    # Copy C++ libraries to output directories
-    - name: Copy C++ libraries to output
-      shell: pwsh
+    # The MSBuild targets in the demo project copy the plugin, GeoSharPlusNET
+    # and both native libraries to bin/<target framework>/
+    - name: Build Grasshopper demo plugin (Release)
+      run: dotnet build GSPdemoGH/GSPdemoGH.csproj --configuration Release
+
+    - name: Verify plugin folder
+      shell: bash
       run: |
-        Write-Host "Copying C++ libraries to output directories..." -ForegroundColor Cyan
-        
-        # Find all target framework directories in bin/Release/
-        $binReleasePath = "${{ github.workspace }}/bin/Release"
-        if (Test-Path $binReleasePath) {
-          $targetDirs = Get-ChildItem -Path $binReleasePath -Directory
-          
-          foreach ($targetDir in $targetDirs) {
-            Write-Host "Target: $($targetDir.Name)" -ForegroundColor Yellow
-            
-            # Copy Windows DLL
-            $windowsDll = "${{ env.CPP_PREBUILD_DIR }}/windows/GeoSharPlusCPP.dll"
-            if (Test-Path $windowsDll) {
-              Copy-Item -Path $windowsDll -Destination $targetDir.FullName -Force
-              Write-Host "  Copied GeoSharPlusCPP.dll" -ForegroundColor Green
-            }
-            
-            # Copy macOS dylib
-            $macosDylib = "${{ env.CPP_PREBUILD_DIR }}/macos/libGeoSharPlusCPP.dylib"
-            if (Test-Path $macosDylib) {
-              Copy-Item -Path $macosDylib -Destination $targetDir.FullName -Force
-              Write-Host "  Copied libGeoSharPlusCPP.dylib" -ForegroundColor Green
-            }
-          }
-        }
-        
-        # Also copy to GeoSharPlusNET output if it exists
-        $netOutputPath = "GeoSharPlusNET/bin/Release"
-        if (Test-Path $netOutputPath) {
-          $targetDirs = Get-ChildItem -Path $netOutputPath -Directory
-          foreach ($targetDir in $targetDirs) {
-            $windowsDll = "${{ env.CPP_PREBUILD_DIR }}/windows/GeoSharPlusCPP.dll"
-            if (Test-Path $windowsDll) {
-              Copy-Item -Path $windowsDll -Destination $targetDir.FullName -Force
-            }
-            $macosDylib = "${{ env.CPP_PREBUILD_DIR }}/macos/libGeoSharPlusCPP.dylib"
-            if (Test-Path $macosDylib) {
-              Copy-Item -Path $macosDylib -Destination $targetDir.FullName -Force
-            }
-          }
-        }
+        ls -la bin/net8.0/
+        for f in GSPdemoGH.gha GeoSharPlusNET.dll GeoSharPlusCPP.dll libGeoSharPlusCPP.dylib; do
+          if [ ! -f "bin/net8.0/$f" ]; then
+            echo "::error::Missing bin/net8.0/$f"
+            exit 1
+          fi
+        done
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: GeoSharPlusNET-build
         path: |
           GeoSharPlusNET/bin/Release/
+          bin/
           ${{ env.CPP_PREBUILD_DIR }}/
 
   # ============================================
@@ -373,10 +319,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -391,51 +337,53 @@ jobs:
           --results-directory ./coverage
 
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: coverage-report
         path: coverage/**/coverage.cobertura.xml
 
   # ============================================
-  # Generate FlatBuffer Files (Manual trigger only)
+  # Check the generated FlatBuffers code
   # ============================================
-  generate-flatbuffers:
-    name: Generate FlatBuffers
+  # The repository holds the generated C++ and C# code. This job generates the
+  # code again with the pinned flatc version. It fails if the result is different.
+  check-generated-flatbuffers:
+    name: Check generated FlatBuffers code
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
-    - name: Install FlatBuffers compiler
+    - name: Install flatc
       run: |
-        sudo apt-get update
-        sudo apt-get install -y flatbuffers-compiler
-        flatc --version
+        curl -fsSL -o "$RUNNER_TEMP/flatc.zip" "https://github.com/google/flatbuffers/releases/download/v${FLATBUFFERS_VERSION}/Linux.flatc.binary.g++-13.zip"
+        unzip -o "$RUNNER_TEMP/flatc.zip" -d "$RUNNER_TEMP/flatc"
+        chmod +x "$RUNNER_TEMP/flatc/flatc"
+        echo "$RUNNER_TEMP/flatc" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/flatc/flatc" --version
 
-    - name: Generate C# files
+    # Use the same flags as GeoSharPlusCPP/CMakeLists.txt
+    - name: Generate C++ and C# code
       run: |
-        mkdir -p generated/GSP_FB/csharp
-        for schema in GeoSharPlusCPP/schema/*.fbs; do
-          echo "Generating C# from $schema..."
-          flatc --csharp --gen-object-api --scoped-enums -o generated/GSP_FB/csharp "$schema"
+        shopt -s nullglob
+        for schema in GeoSharPlusCPP/schema/*.fbs GeoSharPlusCPP/schema/extensions/*.fbs; do
+          echo "Generating from $schema..."
+          flatc --cpp --scoped-enums -I GeoSharPlusCPP/schema -o generated/GSP_FB/cpp "$schema"
+          flatc --csharp --scoped-enums --gen-onefile --gen-object-api -I GeoSharPlusCPP/schema -o generated/GSP_FB/csharp "$schema"
         done
-        echo "Generated files:"
-        ls -la generated/GSP_FB/csharp/
 
-    - name: Generate C++ files
+    - name: Fail if the committed generated code is not current
       run: |
-        mkdir -p generated/GSP_FB/cpp
-        for schema in GeoSharPlusCPP/schema/*.fbs; do
-          echo "Generating C++ from $schema..."
-          flatc --cpp --scoped-enums -o generated/GSP_FB/cpp "$schema"
-        done
-        echo "Generated files:"
-        ls -la generated/GSP_FB/cpp/
+        git add --intent-to-add generated
+        if ! git diff --exit-code -- generated; then
+          echo "::error::The files in generated/ are not current. Run the CMake configure step and commit the result."
+          exit 1
+        fi
 
     - name: Upload generated files
-      uses: actions/upload-artifact@v4
+      if: always()
+      uses: actions/upload-artifact@v7
       with:
         name: generated-flatbuffers
         path: generated/GSP_FB/
