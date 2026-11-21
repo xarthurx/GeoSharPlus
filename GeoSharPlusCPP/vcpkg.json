@@ -1,6 +1,6 @@
 {
   "name": "geosharplus",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "$comment": [
     "builtin-baseline pins every port to vcpkg release 2026.10.16, so local and CI builds use the same versions.",
     "The flatbuffers override must be equal to the Google.FlatBuffers NuGet version in the .csproj files.",
